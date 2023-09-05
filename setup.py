@@ -8,7 +8,6 @@ with open("requirements.txt", "r") as f:
 setup(
     name='pyresparser-py3.10',
     version='2.0.0',
-    description='A simple resume parser used for extracting information from resumes, compatible with python 3.10',
     url='https://github.com/sinmentis/pyresparser-py3.10',
     author='sinmentis',
     license='GPL-3.0',

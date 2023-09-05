@@ -1,5 +1,3 @@
-# Author: Omkar Pathak
-
 import io
 import os
 import re
