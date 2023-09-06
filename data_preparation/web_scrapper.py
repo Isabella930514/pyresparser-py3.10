@@ -112,6 +112,7 @@ def web_scrape(search_location):
     # Info of all jobs
     jobs_info = []
     for job_lk in job_links:
+        job_details = {}
         # Make some random wait time between each page so we don't get banned
         m = random.randint(1, 5)
         time.sleep(m)
@@ -121,19 +122,13 @@ def web_scrape(search_location):
         # Job city and province
         location = job_lk['location']
         # Job title
-        title = driver.find_element_by_xpath(
-            '//*[@class="icl-u-xs-mb--xs icl-u-xs-mt--none jobsearch-JobInfoHeader-title"]').text
+        title = driver.find_element(By.CLASS_NAME, 'jobsearch-JobInfoHeader-title').text
         # Company posted the job
-        company = driver.find_element_by_xpath('//*[@class="icl-u-lg-mr--sm icl-u-xs-mr--xs"]').text
-        # Salary: if no such info, assign NaN
-        if (len(driver.find_elements_by_xpath('//*[@class="jobsearch-JobMetadataHeader-item "]')) == 0):
-            salary = np.nan
-        else:
-            salary = driver.find_element_by_xpath('//*[@class="jobsearch-JobMetadataHeader-item "]').text
+        company = driver.find_element(By.XPATH, '//*[@class="css-1f8zkg3 e19afand0"]').text
         # Job description
-        desc = driver.find_element_by_xpath('//*[@class="jobsearch-JobComponent-description icl-u-xs-mt--md"]').text
+        desc = driver.find_element(By.ID, 'jobDescriptionText').text
         jobs_info.append(
-            {'link': link, 'location': location, 'title': title, 'company': company, 'salary': salary, 'desc': desc})
+            {'link': link, 'location': location, 'title': title, 'company': company, 'desc': desc})
     # Write all jobs info to a json file so it can be re-used later
     with open(config.JOBS_INFO_JSON_FILE, 'w') as fp:
         json.dump(jobs_info, fp)
