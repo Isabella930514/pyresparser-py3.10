@@ -13,7 +13,7 @@ Step 4: Calculate Jaccard similarity of keywords from posted jobs and resume,
         and recommend top 5 matches
 """
 import sys
-import config, web_scrapper
+import config, web_scrapper, job_skill_graph
 from skill_keyword_match import skill_keyword_match
 
 
@@ -32,10 +32,13 @@ def main():
     # ---------------------------------------------------
     jobs_info = web_scrapper.get_jobs_info(location)
     # ---------------------------------------------------
-    # -------- Keyword extraction and analysis ----------
+    # -------- job and skills graph construction ----------
     # ---------------------------------------------------
+    j_s_graph = job_skill_graph.job_skill_graph_def(jobs_info)
     # Initialize skill_keyword_match with job_info
     skill_match = skill_keyword_match(jobs_info)
+
+
     # Extract skill keywords from job descriptions
     skill_match.extract_jobs_keywords()
     # Show exploratory data analysis if job search is nationwide i.e. no input for city

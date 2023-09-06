@@ -1,27 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Oct 18 12:29:09 2018
+Created on Wed 2023
 
-@author: Peng Wang
+@author: Isabel Wang
 
-Scrape jobs from indeed.ca
+Scrape jobs from indeed.nz
 """
 
 import random, json
-import numpy as np
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 import time, os
 import config
 
 # We only collect max 500 jobs from each city
-max_results_per_city = 500
+max_results_per_city = 100
 # Number of jobs show on each result page
-page_record_limit = 50
-num_pages = int(max_results_per_city / page_record_limit)
+page_record_limit = 10
+num_pages = 1
 
 
 def get_jobs_info(search_location):
@@ -72,9 +69,8 @@ def web_scrape(search_location):
     # *** Extract all job urls ***
     for location in job_locations:
         '''indeed searching'''
-        url = 'https://nz.indeed.com/jobs?q=' + config.JOB_SEARCH_WORDS + '&l=' + location
-        # + '&limit=' + str(page_record_limit) + '&fromage=' + str(config.DAY_RANGE)
-        '''seek searching'''
+        url = 'https://nz.indeed.com/jobs?q=' + config.JOB_SEARCH_WORDS + '&l=' + location + '&limit=' + str(page_record_limit) + '&fromage=' + str(config.DAY_RANGE)
+        # '''seek searching'''
         # url = 'https://www.seek.co.nz/' + config.JOB_SEARCH_WORDS + '-jobs/in-' + location
 
         # Set timeout
@@ -123,12 +119,10 @@ def web_scrape(search_location):
         location = job_lk['location']
         # Job title
         title = driver.find_element(By.CLASS_NAME, 'jobsearch-JobInfoHeader-title').text
-        # Company posted the job
-        company = driver.find_element(By.XPATH, '//*[@class="css-1f8zkg3 e19afand0"]').text
         # Job description
         desc = driver.find_element(By.ID, 'jobDescriptionText').text
         jobs_info.append(
-            {'link': link, 'location': location, 'title': title, 'company': company, 'desc': desc})
+            {'link': link, 'location': location, 'title': title, 'desc': desc})
     # Write all jobs info to a json file so it can be re-used later
     with open(config.JOBS_INFO_JSON_FILE, 'w') as fp:
         json.dump(jobs_info, fp)
