@@ -40,9 +40,8 @@ def get_jobs_info(search_location):
 
 def web_scrape(search_location):
     '''
-    Scrape jobs from indeed.ca
+    Scrape jobs from indeed.nz
     When scraping web, be kind and patient
-    Web scraping 101: http://www.gregreda.com/2013/03/03/web-scraping-101-with-python/
     Input:
         search_location - search job in a certain city. Input from commond line.
     Output:
@@ -108,7 +107,6 @@ def web_scrape(search_location):
     # Info of all jobs
     jobs_info = []
     for job_lk in job_links:
-        job_details = {}
         # Make some random wait time between each page so we don't get banned
         m = random.randint(1, 5)
         time.sleep(m)
@@ -119,10 +117,12 @@ def web_scrape(search_location):
         location = job_lk['location']
         # Job title
         title = driver.find_element(By.CLASS_NAME, 'jobsearch-JobInfoHeader-title').text
+        # Job company
+        company = driver.find_element(By.XPATH, '//*[@id="viewJobSSRRoot"]/div/div[2]/div/div/div[1]/div[2]/div[1]/div[2]/div/div/div/div[1]/div/span/a').text
         # Job description
         desc = driver.find_element(By.ID, 'jobDescriptionText').text
         jobs_info.append(
-            {'link': link, 'location': location, 'title': title, 'desc': desc})
+            {'link': link, 'location': location, 'title': title, 'company': company, 'desc': desc})
     # Write all jobs info to a json file so it can be re-used later
     with open(config.JOBS_INFO_JSON_FILE, 'w') as fp:
         json.dump(jobs_info, fp)

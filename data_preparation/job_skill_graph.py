@@ -3,6 +3,11 @@ Created on Wed 2023 6
 
 @author: Isabel Wang
 
+Constructing job-skill graph
+the relation between job and skill is calculated by three ways:
+    1: frequency of skill occurrence for each job title.
+    2: sentiment: find the related sentences of the target skill and calculate the avg sentiment score(one job only has one description)
+    3：TF-IDF
 """
 
 from collections import Counter
