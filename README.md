@@ -10,3 +10,8 @@ A simple web scrapper for scrapping jobs-related information (job title, job com
 ```
 run indeed_job_recommendation.py
 
+```
+Triple Extractor for the long text.
+```
+run indeed_job_recommendation.py
+
