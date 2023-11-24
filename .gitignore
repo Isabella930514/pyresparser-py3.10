@@ -105,3 +105,10 @@ venv.bak/
 
 # Pycharm
 .idea/
+
+data_preparation/indeed_jobs_info.json
+data_preparation/indeed_jobs_links.json
+data_preparation/job-skill.csv
+data_preparation/offer_network.html
+pyresparser/resume_jobs_info.json
+pyresparser/resumes/
