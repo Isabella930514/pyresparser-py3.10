@@ -2,6 +2,7 @@ from pyresparser import ResumeParser
 from data_preparation import config
 import json
 
+
 resume_list = []
 print('start to deal with resumes...')
 for resume in config.RESUME_NAME_LIST:

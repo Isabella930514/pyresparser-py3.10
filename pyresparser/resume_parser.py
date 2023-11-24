@@ -1,5 +1,3 @@
-# Author: Omkar Pathak
-
 import os
 import multiprocessing as mp
 import io
@@ -17,6 +15,7 @@ class ResumeParser(object):
         skills_file=None,
         custom_regex=None
     ):
+        print('Spacy model is loading...')
         nlp = spacy.load('en_core_web_sm')
         custom_nlp = spacy.load(os.path.dirname(os.path.abspath(__file__)))
         self.__skills_file = skills_file
