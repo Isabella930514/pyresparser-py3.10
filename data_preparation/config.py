@@ -23,4 +23,6 @@ RESUME_INFO_JSON_FILE = r'C:/Users/cjv2124/pyresparser-py3.10/pyresparser/resume
 # Skills Data Sources
 SKILLS_DATA = r'C:/Users/cjv2124/pyresparser-py3.10/pyresparser/skills.csv'
 # TEXT-2-TRIPLE TEXT
-TEXT_FILE = r'C:/Users/cjv2124/pyresparser-py3.10/data_preparation/text_2_triple.csv'
+TEXT_FILE = r'C:/Users/cjv2124/pyresparser-py3.10/data_preparation/wiki_sentences_v2.csv'
+# Extractor Type -> 'REBEL', 'spacy'
+EXTRACTOR_TYPE = 'REBEL'

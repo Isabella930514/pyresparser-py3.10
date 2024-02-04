@@ -1,14 +1,21 @@
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import math
 import torch
+import pandas as pd
+import spacy
 import wikipedia
-from IPython.display import HTML
 import IPython
+from tqdm import tqdm
+from IPython.display import HTML
 from pyvis.network import Network
+from spacy.matcher import Matcher
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
+pd.set_option('display.max_colwidth', 200)
 
 # Load model and tokenizer
 tokenizer = AutoTokenizer.from_pretrained("Babelscape/rebel-large")
 model = AutoModelForSeq2SeqLM.from_pretrained("Babelscape/rebel-large")
+nlp = spacy.load('en_core_web_sm')
 
 '''
 remove all entities that doesn't have a page on Wikipedia
@@ -19,11 +26,14 @@ class KB():
         self.entities = {}
         self.relations = []
 
+
     def are_relations_equal(self, r1, r2):
         return all(r1[attr] == r2[attr] for attr in ["head", "type", "tail"])
 
+
     def exists_relation(self, r1):
         return any(self.are_relations_equal(r1, r2) for r2 in self.relations)
+
 
     def merge_relations(self, r1):
         r2 = [r for r in self.relations
@@ -31,6 +41,7 @@ class KB():
         spans_to_add = [span for span in r1["meta"]["spans"]
                         if span not in r2["meta"]["spans"]]
         r2["meta"]["spans"] += spans_to_add
+
 
     def get_wikipedia_data(self, candidate_entity):
         try:
@@ -43,6 +54,7 @@ class KB():
             return entity_data
         except:
             return None
+
 
     def add_entity(self, e):
         self.entities[e["title"]] = {k:v for k,v in e.items() if k != "title"}
@@ -77,6 +89,63 @@ class KB():
         print("Relations:")
         for r in self.relations:
             print(f"  {r}")
+
+
+def get_entities(sent):
+    ent1 = ""
+    ent2 = ""
+
+    prv_tok_dep = ""
+    prv_tok_text = ""
+    prefix = ""
+    modifier = ""
+
+    for tok in nlp(sent):
+        if tok.dep_ != "punct":
+            if tok.dep_ == "compound":
+                prefix = tok.text
+                if prv_tok_dep == "compound":
+                    prefix = prv_tok_text + " " + tok.text
+
+            if tok.dep_.endswith("mod") == True:
+                modifier = tok.text
+                if prv_tok_dep == "compound":
+                    modifier = prv_tok_text + " " + tok.text
+
+            if tok.dep_.find("subj") == True:
+                ent1 = modifier + " " + prefix + " " + tok.text
+                prefix = ""
+                modifier = ""
+
+            if tok.dep_.find("obj") == True:
+                ent2 = modifier + " " + prefix + " " + tok.text
+
+            prv_tok_dep = tok.dep_
+            prv_tok_text = tok.text
+
+    return [ent1.strip(), ent2.strip()]
+
+
+def get_relation(sent):
+
+  doc = nlp(sent)
+
+  matcher = Matcher(nlp.vocab)
+
+  pattern = [{'DEP':'ROOT'},
+            {'DEP':'prep','OP':"?"},
+            {'DEP':'agent','OP':"?"},
+            {'POS':'ADJ','OP':"?"}]
+
+  matcher.add("matching_1", [pattern])
+
+  matches = matcher(doc)
+  k = len(matches) - 1
+
+  span = doc[matches[k][1]:matches[k][2]]
+
+  return(span.text)
+
 
 def extract_relations_from_model_output(text):
     relations = []
@@ -123,21 +192,40 @@ def extract_relations_from_model_output(text):
     return relations
 
 
-def save_network_html(kb, filename="network.html"):
-    # create network
+def save_network_html(kb, type, filename):
     net = Network(directed=True, width="700px", height="700px", bgcolor="#eeeeee")
 
-    # nodes
     color_entity = "#00FF00"
-    for e in kb.entities:
-        net.add_node(e, shape="circle", color=color_entity)
+    if type == 'REBEL':
+        for e in kb.entities:
+            net.add_node(e, shape="circle", color=color_entity)
 
-    # edges
-    for r in kb.relations:
-        net.add_edge(r["head"], r["tail"],
-                     title=r["type"], label=r["type"])
+        for r in kb.relations:
+            net.add_edge(r["head"], r["tail"],
+                         title=r["type"], label=r["type"])
 
-    # save network
+    else:
+        added_nodes = set()
+
+        # Iterate over the rows of the DataFrame
+        for index, row in kb.iterrows():
+            source = row['source']
+            target = row['target']
+            edge_label = row['edge']
+
+            # Add the source and target nodes if they haven't been added already
+            if source not in added_nodes:
+                node_title = f"Node: {source}"
+                net.add_node(source, label=source, shape="circle", color="#00FF00", title=node_title)
+                added_nodes.add(source)
+
+            if target not in added_nodes:
+                net.add_node(target, label=target, shape="circle", color="#00FF00", title=node_title)
+                added_nodes.add(target)
+
+            edge_title = f"Edge: {edge_label}"
+            net.add_edge(source, target, title=edge_title, label=edge_label)
+
     net.repulsion(
         node_distance=200,
         central_gravity=0.2,
@@ -145,15 +233,25 @@ def save_network_html(kb, filename="network.html"):
         spring_strength=0.05,
         damping=0.09
     )
+
     net.set_edge_smooth('dynamic')
     net.show(filename)
 
-def from_text_to_kb(file, span_length=10, verbose=True):
-    #read text from file
-    with open(file, 'r') as file_content:
-        text = file_content.readlines()
-    text = " ".join(text)
 
+def SPACY_extractor(candidate_sentences):
+    entity_pairs = []
+
+    for i in tqdm(candidate_sentences["sentence"]):
+        entity_pairs.append(get_entities(i))
+    relations = [get_relation(i) for i in tqdm(candidate_sentences["sentence"])]
+    source = [i[0] for i in entity_pairs]
+    target = [i[1] for i in entity_pairs]
+    kg_df = pd.DataFrame({'source': source, 'target': target, 'edge': relations})
+
+    return kg_df
+
+
+def REBEL_extractor(text, span_length, verbose):
     # tokenize whole text
     inputs = tokenizer([text], return_tensors="pt")
 
@@ -198,11 +296,9 @@ def from_text_to_kb(file, span_length=10, verbose=True):
         **gen_kwargs,
     )
 
-    # decode relations
     decoded_preds = tokenizer.batch_decode(generated_tokens,
                                            skip_special_tokens=False)
 
-    # create kb
     kb = KB()
     i = 0
     for sentence_pred in decoded_preds:
@@ -215,11 +311,25 @@ def from_text_to_kb(file, span_length=10, verbose=True):
             kb.add_relation(relation)
         i += 1
 
-    kb.print()
-
-    # draw kg
-    filename = "offer_network.html"
-    save_network_html(kb, filename=filename)
-    IPython.display.HTML(filename=filename)
+    return kb
 
 
+def from_text_to_kb(file, type, span_length=25, verbose=True):
+
+    if type == 'REBEL':
+        with open(file, 'r', encoding='utf-8') as file_content:
+            lines = file_content.readlines()
+            lines = [line.strip() for line in lines[1:]]
+            text = ' '.join(lines)
+        kb = REBEL_extractor(text, span_length, verbose)
+        filename = "network_REBEL.html"
+        save_network_html(kb, type, filename)
+        IPython.display.HTML(filename=filename)
+
+    if type == 'spacy':
+        candidate_sentences = pd.read_csv(file)
+
+        kb = SPACY_extractor(candidate_sentences)
+        filename = "network_spacy.html"
+        save_network_html(kb, type, filename)
+        IPython.display.HTML(filename=filename)
