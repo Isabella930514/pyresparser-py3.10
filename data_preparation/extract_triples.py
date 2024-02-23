@@ -1,6 +1,9 @@
 import math
+import os.path
+import time
 import torch
 import pandas as pd
+import pickle
 import spacy
 import wikipedia
 import IPython
@@ -9,6 +12,7 @@ from IPython.display import HTML
 from pyvis.network import Network
 from spacy.matcher import Matcher
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+import entity_neighbour_extractor as ene
 
 pd.set_option('display.max_colwidth', 200)
 
@@ -201,8 +205,7 @@ def save_network_html(kb, type, filename):
             net.add_node(e, shape="circle", color=color_entity)
 
         for r in kb.relations:
-            net.add_edge(r["head"], r["tail"],
-                         title=r["type"], label=r["type"])
+            net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
 
     else:
         added_nodes = set()
@@ -314,22 +317,40 @@ def REBEL_extractor(text, span_length, verbose):
     return kb
 
 
-def from_text_to_kb(file, type, span_length=25, verbose=True):
+def from_text_to_kb(file, model, if_neigh, span_length=25, verbose=True):
+    start_time = time.time()
+    directory = "./kb"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    file_path = os.path.join(directory, f"kb_{model}.pkl")
 
-    if type == 'REBEL':
-        with open(file, 'r', encoding='utf-8') as file_content:
-            lines = file_content.readlines()
-            lines = [line.strip() for line in lines[1:]]
-            text = ' '.join(lines)
-        kb = REBEL_extractor(text, span_length, verbose)
-        filename = "network_REBEL.html"
-        save_network_html(kb, type, filename)
+    if model == 'REBEL':
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as kb_file:
+                kb = pickle.load(kb_file)
+        else:
+            with open(file, 'r', encoding='utf-8') as file_content:
+                lines = file_content.readlines()
+                lines = [line.strip() for line in lines[1:]]
+                text = ' '.join(lines)
+            kb = REBEL_extractor(text, span_length, verbose)
+            with open(file_path, "wb") as kb_file:
+                pickle.dump(kb, kb_file)
+        filename = f"network_{model}.html"
+        if if_neigh == True:
+            combined_kb = ene.load_data(kb)
+            save_network_html(combined_kb, model, filename)
+        else:
+            save_network_html(kb, model, filename)
         IPython.display.HTML(filename=filename)
 
-    if type == 'spacy':
+    if model == 'spacy':
         candidate_sentences = pd.read_csv(file)
-
         kb = SPACY_extractor(candidate_sentences)
-        filename = "network_spacy.html"
-        save_network_html(kb, type, filename)
+        filename = f"network_{model}.html"
+        save_network_html(kb, model, filename)
         IPython.display.HTML(filename=filename)
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"-----{model} running time:{elapsed_time}s-----")

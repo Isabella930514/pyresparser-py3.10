@@ -15,7 +15,7 @@ JOB_SEARCH_WORDS = 'data+or+scientist'
 # To avoid same job posted multiple times, we only look back for 30 days
 DAY_RANGE = 30
 # Path to sample resume
-SAMPLE_RESUME_PDF = r'./data_preparation/Isabel.pdf'
+SAMPLE_RESUME_PDF = r'./data_preparation/Isabel.txt'
 # Resume names
 RESUME_NAME_LIST = ['Isabel.pdf']
 # Saved file for each resume info
@@ -26,3 +26,5 @@ SKILLS_DATA = r'C:/Users/cjv2124/pyresparser-py3.10/pyresparser/skills.csv'
 TEXT_FILE = r'C:/Users/cjv2124/pyresparser-py3.10/data_preparation/wiki_sentences_v2.csv'
 # Extractor Type -> 'REBEL', 'spacy'
 EXTRACTOR_TYPE = 'REBEL'
+# if extract neighbours from wikipedia
+IF_NEIGHBOUR = True
