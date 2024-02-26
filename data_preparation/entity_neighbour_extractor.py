@@ -37,14 +37,6 @@ class EX_KB:
                 'meta': {'spans': spans}
             })
 
-    def combine(self, kb):
-        for key, value in kb.entities.items():
-            if key not in self.entities:
-                self.entities[key] = value
-            else:
-                pass
-        self.relations += kb.relations
-
 
 def get_results(endpoint_url, query):
     try:
@@ -60,19 +52,19 @@ def get_results(endpoint_url, query):
 
 
 def convert_format(ex_kb, results, key_label, endpoint_url):
-
     label_cache = {}
+
     def get_property_label(property_id, endpoint_url):
 
         if property_id in label_cache:
             return label_cache[property_id]
 
         query = f'''
-        SELECT DISTINCT ?propertyLabel WHERE {{
-          wd:{property_id} rdfs:label ?propertyLabel .
-          FILTER(LANG(?propertyLabel) = "en")
-        }}
-        '''
+            SELECT DISTINCT ?propertyLabel WHERE {{
+              wd:{property_id} rdfs:label ?propertyLabel .
+              FILTER(LANG(?propertyLabel) = "en")
+            }}
+            '''
 
         results = get_results(endpoint_url, query)
         results = list(results["results"]["bindings"])
@@ -92,10 +84,12 @@ def convert_format(ex_kb, results, key_label, endpoint_url):
         object_label = item['objectLabel']['value']
         object_id = object_uri.split('/')[-1]
         if object_id.startswith('Q') and object_id[1:].isdigit():
-            ex_kb.add_entity(object_uri, object_label)
-            ex_kb.add_relation(key_label, get_property_label(property_uri.split('/')[-1], endpoint_url), object_label, [{'start': 0, 'end': 0}])
-        else:
             continue
+        else:
+            ex_kb.add_entity(object_uri, object_label)
+            ex_kb.add_relation(key_label, get_property_label(property_uri.split('/')[-1], endpoint_url), object_label,
+                               [{'start': 0, 'end': 0}])
+
 
 
 def get_wikidata_id(wikipedia_url):
@@ -140,7 +134,7 @@ def load_data(kb, expand_num, endpoint_url, max_neigh):
 def process_entity(key_label, entity_link, endpoint_url, ex_kb, max_neigh):
     entity_key = get_wikidata_id(entity_link)
     query = f"""
-    SELECT DISTINCT ?subjectLabel ?subject ?property ?object ?objectLabel WHERE {{
+    SELECT DISTINCT ?subjectLabel ?subject ?property ?object WHERE {{
       VALUES ?subject {{wd:{entity_key}}}
       ?subject ?property ?object .
 

@@ -15,7 +15,7 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import entity_neighbour_extractor as ene
 
 pd.set_option('display.max_colwidth', 200)
-
+batch_size = 10
 # Load model and tokenizer
 tokenizer = AutoTokenizer.from_pretrained("Babelscape/rebel-large")
 model = AutoModelForSeq2SeqLM.from_pretrained("Babelscape/rebel-large")
@@ -28,8 +28,8 @@ merge entities if they have the same wikipedia page
 class KB():
     def __init__(self):
         self.entities = {}
-        self.relations = []
-
+        self.relations = set()
+        self.wiki_cache = {}
 
     def are_relations_equal(self, r1, r2):
         return all(r1[attr] == r2[attr] for attr in ["head", "type", "tail"])
@@ -48,6 +48,8 @@ class KB():
 
 
     def get_wikipedia_data(self, candidate_entity):
+        if candidate_entity in self.wiki_cache:
+            return self.wiki_cache[candidate_entity]
         try:
             page = wikipedia.page(candidate_entity, auto_suggest=False)
             entity_data = {
@@ -55,6 +57,7 @@ class KB():
                 "url": page.url,
                 "summary": page.summary
             }
+            self.wiki_cache[candidate_entity] = entity_data  # 更新缓存
             return entity_data
         except:
             return None
@@ -63,36 +66,24 @@ class KB():
     def add_entity(self, e):
         self.entities[e["title"]] = {k:v for k,v in e.items() if k != "title"}
 
-    def add_relation(self, r):
-        # check on wikipedia
-        candidate_entities = [r["head"], r["tail"]]
-        entities = [self.get_wikipedia_data(ent) for ent in candidate_entities]
+    def add_relation(self, relation):
+        relation_tuple = (relation["head"], relation["type"], relation["tail"])
+        if relation_tuple not in self.relations:
+            self.relations.add(relation_tuple)
+            for entity in [relation["head"], relation["tail"]]:
+                if entity not in self.entities:
+                    wiki_data = self.get_wikipedia_data(entity)
+                    if wiki_data:
+                        self.entities[entity].update(wiki_data)
 
-        # if one entity does not exist, stop
-        if any(ent is None for ent in entities):
-            return
 
-        # manage new entities
-        for e in entities:
-            self.add_entity(e)
-
-        # rename relation entities with their wikipedia titles
-        r["head"] = entities[0]["title"]
-        r["tail"] = entities[1]["title"]
-
-        # manage new relation
-        if not self.exists_relation(r):
-            self.relations.append(r)
-        else:
-            self.merge_relations(r)
-
-    def print(self):
-        print("Entities:")
-        for e in self.entities.items():
-            print(f"  {e}")
-        print("Relations:")
-        for r in self.relations:
-            print(f"  {r}")
+    def combine(self, kb):
+        for key, value in kb.entities.items():
+            if key not in self.entities:
+                self.entities[key] = value
+            else:
+                pass
+        self.relations += kb.relations
 
 
 def get_entities(sent):
@@ -196,7 +187,7 @@ def extract_relations_from_model_output(text):
     return relations
 
 
-def save_network_html(extracted_kb, origin_kb, if_neigh, type, filename):
+def save_network_html(extracted_kb, origin_kb, if_neigh, filename):
     net = Network(directed=True, width="2000px", height="1000px", bgcolor="#eeeeee")
 
 
@@ -214,28 +205,6 @@ def save_network_html(extracted_kb, origin_kb, if_neigh, type, filename):
 
         for r in extracted_kb.relations:
             net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
-
-    # else:
-    #     added_nodes = set()
-    #
-    #     # Iterate over the rows of the DataFrame
-    #     for index, row in origin_kb.iterrows():
-    #         source = row['source']
-    #         target = row['target']
-    #         edge_label = row['edge']
-    #
-    #         # Add the source and target nodes if they haven't been added already
-    #         if source not in added_nodes:
-    #             node_title = f"Node: {source}"
-    #             net.add_node(source, label=source, shape="circle", color="#00FF00", title=node_title)
-    #             added_nodes.add(source)
-    #
-    #         if target not in added_nodes:
-    #             net.add_node(target, label=target, shape="circle", color="#00FF00", title=node_title)
-    #             added_nodes.add(target)
-    #
-    #         edge_title = f"Edge: {edge_label}"
-    #         net.add_edge(source, target, title=edge_title, label=edge_label)
 
     net.repulsion(
         node_distance=200,
@@ -268,27 +237,36 @@ def SPACY_extractor(candidate_sentences):
     return kb
 
 
-def REBEL_extractor(text, span_length, verbose):
+def REBEL_extractor(text, span_length):
     # tokenize whole text
     inputs = tokenizer([text], return_tensors="pt")
 
     # compute span boundaries
     num_tokens = len(inputs["input_ids"][0])
-    if verbose:
-        print(f"Input has {num_tokens} tokens")
     num_spans = math.ceil(num_tokens / span_length)
-    if verbose:
-        print(f"Input has {num_spans} spans")
     overlap = math.ceil((num_spans * span_length - num_tokens) /
                         max(num_spans - 1, 1))
     spans_boundaries = []
+
     start = 0
     for i in range(num_spans):
         spans_boundaries.append([start + span_length * i,
                                  start + span_length * (i + 1)])
         start -= overlap
-    if verbose:
-        print(f"Span boundaries are {spans_boundaries}")
+
+    def batch_inputs(input_ids, attention_mask, batch_size):
+        total_samples = input_ids.size(0)
+
+        batched_input_ids = []
+        batched_attention_masks = []
+
+        for start_idx in range(0, total_samples, batch_size):
+            end_idx = start_idx + batch_size
+            batched_input_ids.append(input_ids[start_idx:end_idx])
+            batched_attention_masks.append(attention_mask[start_idx:end_idx])
+
+        return batched_input_ids, batched_attention_masks
+
 
     # transform input with spans
     tensor_ids = [inputs["input_ids"][0][boundary[0]:boundary[1]]
@@ -300,25 +278,30 @@ def REBEL_extractor(text, span_length, verbose):
         "attention_mask": torch.stack(tensor_masks)
     }
 
+    batched_input_ids, batched_attention_masks = batch_inputs(inputs['input_ids'], inputs['attention_mask'], batch_size)
+
     # generate relations
     num_return_sequences = 3
     gen_kwargs = {
-        "max_length": 256,
+        "max_length": 25,
         "length_penalty": 0,
         "num_beams": 3,
         "num_return_sequences": num_return_sequences
     }
-    generated_tokens = model.generate(
-        **inputs,
-        **gen_kwargs,
-    )
 
-    decoded_preds = tokenizer.batch_decode(generated_tokens,
-                                           skip_special_tokens=False)
+    all_decoded_preds = []
+    for input_ids_batch, attention_mask_batch in zip(batched_input_ids, batched_attention_masks):
+        batch_inputs = {
+            "input_ids": input_ids_batch,
+            "attention_mask": attention_mask_batch
+        }
+        generated_tokens = model.generate(**batch_inputs, **gen_kwargs)
+        decoded_preds = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
+        all_decoded_preds.extend(decoded_preds)
 
     kb = KB()
     i = 0
-    for sentence_pred in decoded_preds:
+    for sentence_pred in tqdm(all_decoded_preds):
         current_span_index = i // num_return_sequences
         relations = extract_relations_from_model_output(sentence_pred)
         for relation in relations:
@@ -331,7 +314,16 @@ def REBEL_extractor(text, span_length, verbose):
     return kb
 
 
-def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, span_length=25, verbose=True):
+def save_kg_to_csv(kb, file):
+    lines = []
+    for relation in kb.relations:
+        line = relation['head']+'\t'+relation['type']+'\t'+relation['tail']+'\n'
+        lines.append(line)
+    with open(file, "w", encoding="utf-8") as kg_file:
+        kg_file.writelines(lines)
+
+
+def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, span_length=25):
     start_time = time.time()
     directory = "./kb"
     if not os.path.exists(directory):
@@ -347,16 +339,17 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
                 lines = file_content.readlines()
                 lines = [line.strip() for line in lines[1:]]
                 text = ' '.join(lines)
-            kb = REBEL_extractor(text, span_length, verbose)
+            kb = REBEL_extractor(text, span_length)
             with open(file_path, "wb") as kb_file:
                 pickle.dump(kb, kb_file)
         filename = f"network_{model}.html"
+        file = f"./kb/{model}_kg.csv"
         if if_neigh == True:
-            extracted_kb, origin_kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh)
-            save_network_html(extracted_kb, origin_kb, if_neigh, model, filename)
+            extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh)
         else:
             extracted_kb = ""
-            save_network_html(extracted_kb, kb, if_neigh, model, filename)
+        save_network_html(extracted_kb, kb, if_neigh, filename)
+        save_kg_to_csv(kb, file)
         IPython.display.HTML(filename=filename)
 
     if model == 'SPACY':
@@ -370,13 +363,14 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
                 pickle.dump(kb, kb_file)
         filename = f"network_{model}.html"
         if if_neigh == True:
-            extracted_kb, origin_kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh)
-            save_network_html(extracted_kb, origin_kb, if_neigh, model, filename)
+            extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh)
         else:
             extracted_kb = ""
-            save_network_html(extracted_kb, kb, if_neigh, model, filename)
+        save_network_html(extracted_kb, kb, if_neigh, filename)
+        save_kg_to_csv(kb, file)
         IPython.display.HTML(filename=filename)
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"-----{model} running time:{elapsed_time}s-----")
+    print(f"-----kg augmentation complete, {model} running time:{elapsed_time}s-----")
+    print(f"-----start to kg predication-----")
