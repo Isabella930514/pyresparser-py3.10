@@ -15,7 +15,7 @@ def main():
     # ---------------------------------------------------
     # ---- Scrape from web or read from local saved -----
     # ---------------------------------------------------
-    # jobs_info = web_scrapper.get_jobs_info(location)
+    jobs_info = web_scrapper.get_jobs_info(location)
     # ---------------------------------------------------
     # ---- flexible extract triples from text -----
     # ---------------------------------------------------
@@ -24,7 +24,7 @@ def main():
     # ---------------------------------------------------
     # -------- job and skills graph construction ----------
     # ---------------------------------------------------
-    # j_s_graph = job_skill_graph.job_skill_graph_def(jobs_info)
+    j_s_graph = job_skill_graph.job_skill_graph_def(jobs_info)
 
 
 if __name__ == "__main__":

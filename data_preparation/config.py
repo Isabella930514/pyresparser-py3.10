@@ -24,12 +24,12 @@ RESUME_INFO_JSON_FILE = r'C:/Users/cjv2124/pyresparser-py3.10/pyresparser/resume
 SKILLS_DATA = r'C:/Users/cjv2124/pyresparser-py3.10/pyresparser/skills.csv'
 # TEXT-2-TRIPLE TEXT
 TEXT_FILE = r'C:/Users/cjv2124/pyresparser-py3.10/data_preparation/wiki_sentences_v2.csv'
-# Extractor Type -> 'REBEL', 'spacy'
+# Extractor Type -> 'REBEL', 'SPACY'
 EXTRACTOR_TYPE = 'REBEL'
 # if extract neighbours from wikipedia
 IF_NEIGHBOUR = True
 # SET the number of expanded-node and max neighours
-EXPEND_NUM = 23
+EXPEND_NUM = 10
 MAX_NEIGH = 10
 # wiki link
 endpoint_url = "https://query.wikidata.org/sparql"

@@ -199,43 +199,43 @@ def extract_relations_from_model_output(text):
 def save_network_html(extracted_kb, origin_kb, if_neigh, type, filename):
     net = Network(directed=True, width="2000px", height="1000px", bgcolor="#eeeeee")
 
-    if type == 'REBEL':
-        for e in origin_kb.entities:
-            net.add_node(e, shape="circle", color="#00FF00")
-        for r in origin_kb.relations:
+
+    for e in origin_kb.entities:
+        net.add_node(e, shape="circle", color="#00FF00")
+    for r in origin_kb.relations:
+        net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
+
+    if if_neigh == True:
+        for entity in list(origin_kb.entities.keys()):
+            if entity in extracted_kb.entities:
+                del extracted_kb.entities[entity]
+        for ee in extracted_kb.entities:
+            net.add_node(ee, shape="circle", color="#e03112")
+
+        for r in extracted_kb.relations:
             net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
 
-        if if_neigh == True:
-            for entity in list(origin_kb.entities.keys()):
-                if entity in extracted_kb.entities:
-                    del extracted_kb.entities[entity]
-            for ee in extracted_kb.entities:
-                net.add_node(ee, shape="circle", color="#e03112")
-
-            for r in extracted_kb.relations:
-                net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
-
-    else:
-        added_nodes = set()
-
-        # Iterate over the rows of the DataFrame
-        for index, row in origin_kb.iterrows():
-            source = row['source']
-            target = row['target']
-            edge_label = row['edge']
-
-            # Add the source and target nodes if they haven't been added already
-            if source not in added_nodes:
-                node_title = f"Node: {source}"
-                net.add_node(source, label=source, shape="circle", color="#00FF00", title=node_title)
-                added_nodes.add(source)
-
-            if target not in added_nodes:
-                net.add_node(target, label=target, shape="circle", color="#00FF00", title=node_title)
-                added_nodes.add(target)
-
-            edge_title = f"Edge: {edge_label}"
-            net.add_edge(source, target, title=edge_title, label=edge_label)
+    # else:
+    #     added_nodes = set()
+    #
+    #     # Iterate over the rows of the DataFrame
+    #     for index, row in origin_kb.iterrows():
+    #         source = row['source']
+    #         target = row['target']
+    #         edge_label = row['edge']
+    #
+    #         # Add the source and target nodes if they haven't been added already
+    #         if source not in added_nodes:
+    #             node_title = f"Node: {source}"
+    #             net.add_node(source, label=source, shape="circle", color="#00FF00", title=node_title)
+    #             added_nodes.add(source)
+    #
+    #         if target not in added_nodes:
+    #             net.add_node(target, label=target, shape="circle", color="#00FF00", title=node_title)
+    #             added_nodes.add(target)
+    #
+    #         edge_title = f"Edge: {edge_label}"
+    #         net.add_edge(source, target, title=edge_title, label=edge_label)
 
     net.repulsion(
         node_distance=200,
@@ -257,9 +257,15 @@ def SPACY_extractor(candidate_sentences):
     relations = [get_relation(i) for i in tqdm(candidate_sentences["sentence"])]
     source = [i[0] for i in entity_pairs]
     target = [i[1] for i in entity_pairs]
-    kg_df = pd.DataFrame({'source': source, 'target': target, 'edge': relations})
-
-    return kg_df
+    kg_df = pd.DataFrame({'head': source, 'type': relations, 'tail': target})
+    kb = KB()
+    for index, row in kg_df.iterrows():
+        relation = row.to_dict()
+        relation["meta"] = {
+            "spans": ""
+        }
+        kb.add_relation(relation)
+    return kb
 
 
 def REBEL_extractor(text, span_length, verbose):
@@ -353,11 +359,22 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
             save_network_html(extracted_kb, kb, if_neigh, model, filename)
         IPython.display.HTML(filename=filename)
 
-    if model == 'spacy':
-        candidate_sentences = pd.read_csv(file)
-        kb = SPACY_extractor(candidate_sentences)
+    if model == 'SPACY':
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as kb_file:
+                kb = pickle.load(kb_file)
+        else:
+            candidate_sentences = pd.read_csv(file)
+            kb = SPACY_extractor(candidate_sentences)
+            with open(file_path, "wb") as kb_file:
+                pickle.dump(kb, kb_file)
         filename = f"network_{model}.html"
-        save_network_html(kb, model, filename)
+        if if_neigh == True:
+            extracted_kb, origin_kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh)
+            save_network_html(extracted_kb, origin_kb, if_neigh, model, filename)
+        else:
+            extracted_kb = ""
+            save_network_html(extracted_kb, kb, if_neigh, model, filename)
         IPython.display.HTML(filename=filename)
 
     end_time = time.time()
