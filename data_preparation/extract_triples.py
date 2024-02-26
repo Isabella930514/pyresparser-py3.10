@@ -196,22 +196,30 @@ def extract_relations_from_model_output(text):
     return relations
 
 
-def save_network_html(kb, type, filename):
-    net = Network(directed=True, width="700px", height="700px", bgcolor="#eeeeee")
+def save_network_html(extracted_kb, origin_kb, if_neigh, type, filename):
+    net = Network(directed=True, width="2000px", height="1000px", bgcolor="#eeeeee")
 
-    color_entity = "#00FF00"
     if type == 'REBEL':
-        for e in kb.entities:
-            net.add_node(e, shape="circle", color=color_entity)
-
-        for r in kb.relations:
+        for e in origin_kb.entities:
+            net.add_node(e, shape="circle", color="#00FF00")
+        for r in origin_kb.relations:
             net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
+
+        if if_neigh == True:
+            for entity in list(origin_kb.entities.keys()):
+                if entity in extracted_kb.entities:
+                    del extracted_kb.entities[entity]
+            for ee in extracted_kb.entities:
+                net.add_node(ee, shape="circle", color="#e03112")
+
+            for r in extracted_kb.relations:
+                net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
 
     else:
         added_nodes = set()
 
         # Iterate over the rows of the DataFrame
-        for index, row in kb.iterrows():
+        for index, row in origin_kb.iterrows():
             source = row['source']
             target = row['target']
             edge_label = row['edge']
@@ -317,7 +325,7 @@ def REBEL_extractor(text, span_length, verbose):
     return kb
 
 
-def from_text_to_kb(file, model, if_neigh, span_length=25, verbose=True):
+def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, span_length=25, verbose=True):
     start_time = time.time()
     directory = "./kb"
     if not os.path.exists(directory):
@@ -338,10 +346,11 @@ def from_text_to_kb(file, model, if_neigh, span_length=25, verbose=True):
                 pickle.dump(kb, kb_file)
         filename = f"network_{model}.html"
         if if_neigh == True:
-            combined_kb = ene.load_data(kb)
-            save_network_html(combined_kb, model, filename)
+            extracted_kb, origin_kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh)
+            save_network_html(extracted_kb, origin_kb, if_neigh, model, filename)
         else:
-            save_network_html(kb, model, filename)
+            extracted_kb = ""
+            save_network_html(extracted_kb, kb, if_neigh, model, filename)
         IPython.display.HTML(filename=filename)
 
     if model == 'spacy':

@@ -15,15 +15,16 @@ def main():
     # ---------------------------------------------------
     # ---- Scrape from web or read from local saved -----
     # ---------------------------------------------------
-    jobs_info = web_scrapper.get_jobs_info(location)
+    # jobs_info = web_scrapper.get_jobs_info(location)
     # ---------------------------------------------------
     # ---- flexible extract triples from text -----
     # ---------------------------------------------------
-    extract_triples.from_text_to_kb(config.TEXT_FILE, config.EXTRACTOR_TYPE, config.IF_NEIGHBOUR, verbose=True)
+    extract_triples.from_text_to_kb(config.TEXT_FILE, config.EXTRACTOR_TYPE, config.IF_NEIGHBOUR,
+                                    config.EXPEND_NUM, config.endpoint_url, config.MAX_NEIGH, verbose=True)
     # ---------------------------------------------------
     # -------- job and skills graph construction ----------
     # ---------------------------------------------------
-    j_s_graph = job_skill_graph.job_skill_graph_def(jobs_info)
+    # j_s_graph = job_skill_graph.job_skill_graph_def(jobs_info)
 
 
 if __name__ == "__main__":
