@@ -8,14 +8,17 @@ import spacy
 import wikipedia
 import IPython
 from tqdm import tqdm
+from datetime import datetime as dt
 from IPython.display import HTML
 from pyvis.network import Network
 from spacy.matcher import Matcher
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import entity_neighbour_extractor as ene
 
 pd.set_option('display.max_colwidth', 200)
-batch_size = 10
+batch_size = 100
+Max_WORKERS = 128
 # Load model and tokenizer
 tokenizer = AutoTokenizer.from_pretrained("Babelscape/rebel-large")
 model = AutoModelForSeq2SeqLM.from_pretrained("Babelscape/rebel-large")
@@ -28,7 +31,7 @@ merge entities if they have the same wikipedia page
 class KB():
     def __init__(self):
         self.entities = {}
-        self.relations = set()
+        self.relations = []
         self.wiki_cache = {}
 
     def are_relations_equal(self, r1, r2):
@@ -66,15 +69,23 @@ class KB():
     def add_entity(self, e):
         self.entities[e["title"]] = {k:v for k,v in e.items() if k != "title"}
 
-    def add_relation(self, relation):
-        relation_tuple = (relation["head"], relation["type"], relation["tail"])
-        if relation_tuple not in self.relations:
-            self.relations.add(relation_tuple)
-            for entity in [relation["head"], relation["tail"]]:
-                if entity not in self.entities:
-                    wiki_data = self.get_wikipedia_data(entity)
-                    if wiki_data:
-                        self.entities[entity].update(wiki_data)
+    def add_relation(self, r):
+        candidate_entities = [r["head"], r["tail"]]
+        entities = [self.get_wikipedia_data(ent) for ent in candidate_entities]
+
+        if any(ent is None for ent in entities):
+            return
+
+        for e in entities:
+            self.add_entity(e)
+
+        r["head"] = entities[0]["title"]
+        r["tail"] = entities[1]["title"]
+
+        if not self.exists_relation(r):
+            self.relations.append(r)
+        else:
+            self.merge_relations(r)
 
 
     def combine(self, kb):
@@ -201,10 +212,16 @@ def save_network_html(extracted_kb, origin_kb, if_neigh, filename):
             if entity in extracted_kb.entities:
                 del extracted_kb.entities[entity]
         for ee in extracted_kb.entities:
-            net.add_node(ee, shape="circle", color="#e03112")
+            try:
+                net.add_node(ee, shape="circle", color="#e03112")
+            except:
+                continue
 
         for r in extracted_kb.relations:
-            net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
+            try:
+                net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
+            except:
+                continue
 
     net.repulsion(
         node_distance=200,
@@ -290,26 +307,43 @@ def REBEL_extractor(text, span_length):
     }
 
     all_decoded_preds = []
-    for input_ids_batch, attention_mask_batch in zip(batched_input_ids, batched_attention_masks):
+    batch_num = len(batched_input_ids)
+    print(f"----total has {batch_num} batches-----")
+    print("-----start to run model-----")
+
+    for index, (input_ids_batch, attention_mask_batch) in enumerate(zip(batched_input_ids, batched_attention_masks)):
         batch_inputs = {
             "input_ids": input_ids_batch,
             "attention_mask": attention_mask_batch
         }
+
+        start = dt.now()
         generated_tokens = model.generate(**batch_inputs, **gen_kwargs)
-        decoded_preds = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
+        running_secs = (dt.now() - start).seconds
+        print(f"-----running time: {running_secs}s for batch {index}-----")
+
+        decoded_preds = tokenizer.batch_decode(generated_tokens, skip_special_tokens=False)
         all_decoded_preds.extend(decoded_preds)
 
     kb = KB()
-    i = 0
-    for sentence_pred in tqdm(all_decoded_preds):
-        current_span_index = i // num_return_sequences
-        relations = extract_relations_from_model_output(sentence_pred)
+
+    def process_prediction(sentence_pred):
+        current_span_index = sentence_pred[1] // num_return_sequences
+        relations = extract_relations_from_model_output(sentence_pred[0])
+        results = []
         for relation in relations:
             relation["meta"] = {
                 "spans": [spans_boundaries[current_span_index]]
             }
-            kb.add_relation(relation)
-        i += 1
+            results.append(relation)
+        return results
+
+    with ThreadPoolExecutor(max_workers=Max_WORKERS) as executor:
+        futures = {executor.submit(process_prediction, (pred, i)): i for i, pred in enumerate(all_decoded_preds)}
+        for future in tqdm(as_completed(futures), total=len(futures)):
+            results = future.result()
+            for relation in results:
+                kb.add_relation(relation)
 
     return kb
 
@@ -317,7 +351,9 @@ def REBEL_extractor(text, span_length):
 def save_kg_to_csv(kb, file):
     lines = []
     for relation in kb.relations:
-        line = relation['head']+'\t'+relation['type']+'\t'+relation['tail']+'\n'
+        if any(item is None for item in relation.values()):
+            continue
+        line = relation['head']+';'+relation['type']+';'+relation['tail']+'\n'
         lines.append(line)
     with open(file, "w", encoding="utf-8") as kg_file:
         kg_file.writelines(lines)
@@ -342,13 +378,17 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
             kb = REBEL_extractor(text, span_length)
             with open(file_path, "wb") as kb_file:
                 pickle.dump(kb, kb_file)
+        print("-----triples extraction complete-----")
+
         filename = f"network_{model}.html"
-        file = f"./kb/{model}_kg.csv"
-        if if_neigh == True:
-            extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh)
+        file = f"./kb/{model}_kg_{if_neigh}.csv"
+        if if_neigh:
+            extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
+            save_network_html(extracted_kb, kb, if_neigh, filename)
+            kb.combine(extracted_kb)
         else:
-            extracted_kb = ""
-        save_network_html(extracted_kb, kb, if_neigh, filename)
+            extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
+            save_network_html(extracted_kb, kb, if_neigh, filename)
         save_kg_to_csv(kb, file)
         IPython.display.HTML(filename=filename)
 
@@ -361,12 +401,18 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
             kb = SPACY_extractor(candidate_sentences)
             with open(file_path, "wb") as kb_file:
                 pickle.dump(kb, kb_file)
+        print("-----triples extraction complete-----")
+
         filename = f"network_{model}.html"
-        if if_neigh == True:
+        file = f"./kb/{model}_kg_{if_neigh}.csv"
+
+        if if_neigh:
             extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh)
+            save_network_html(extracted_kb, kb, if_neigh, filename)
+            kb.combine(extracted_kb)
         else:
             extracted_kb = ""
-        save_network_html(extracted_kb, kb, if_neigh, filename)
+            save_network_html(extracted_kb, kb, if_neigh, filename)
         save_kg_to_csv(kb, file)
         IPython.display.HTML(filename=filename)
 

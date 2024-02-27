@@ -27,9 +27,9 @@ TEXT_FILE = r'C:/Users/cjv2124/pyresparser-py3.10/data_preparation/wiki_sentence
 # Extractor Type -> 'REBEL', 'SPACY'
 EXTRACTOR_TYPE = 'REBEL'
 # if extract neighbours from wikipedia
-IF_NEIGHBOUR = False
+IF_NEIGHBOUR = True
 # SET the number of expanded-node and max neighours
-EXPEND_NUM = 50
-MAX_NEIGH = 20
+EXPEND_NUM = 300
+MAX_NEIGH = 10
 # wiki link; WIKI datasets:https://drive.google.com/file/d/1yuEUhkVFIYfMVfpA_crFGfSeJLgbPUxu/view
 endpoint_url = "https://query.wikidata.org/sparql"

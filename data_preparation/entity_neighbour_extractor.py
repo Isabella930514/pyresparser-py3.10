@@ -4,7 +4,6 @@ import sys
 from SPARQLWrapper import SPARQLWrapper, JSON
 from bs4 import BeautifulSoup
 from itertools import islice
-from tqdm import tqdm
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -51,7 +50,7 @@ def get_results(endpoint_url, query):
 
 
 
-def convert_format(ex_kb, results, key_label, endpoint_url):
+def convert_format(subject_label, ex_kb, results, endpoint_url):
     label_cache = {}
 
     def get_property_label(property_id, endpoint_url):
@@ -79,16 +78,20 @@ def convert_format(ex_kb, results, key_label, endpoint_url):
                 return property_id
 
     for item in results:
-        property_uri = item['property']['value']
+        property_id = item['property']['value'].split('/')[-1]
         object_uri = item['object']['value']
-        object_label = item['objectLabel']['value']
         object_id = object_uri.split('/')[-1]
         if object_id.startswith('Q') and object_id[1:].isdigit():
-            continue
+           object_label = get_property_label(object_id, endpoint_url)
         else:
-            ex_kb.add_entity(object_uri, object_label)
-            ex_kb.add_relation(key_label, get_property_label(property_uri.split('/')[-1], endpoint_url), object_label,
-                               [{'start': 0, 'end': 0}])
+            continue
+        if property_id.startswith('P') and property_id[1:].isdigit():
+            property_label = get_property_label(property_id, endpoint_url)
+        else:
+            continue
+
+        ex_kb.add_entity(object_uri, object_label)
+        ex_kb.add_relation(subject_label, property_label, object_label, [{'start': 0, 'end': 0}])
 
 
 
@@ -103,39 +106,49 @@ def get_wikidata_id(wikipedia_url):
         return "Wikidata ID not found."
 
 
-def load_data(kb, expand_num, endpoint_url, max_neigh):
-    ex_kb = EX_KB()
-    node_size = len(kb.entities)
-    print(f"-----the original kg has {node_size} entities-----")
-    print(f"-----expect to expand {expand_num} entities and start to expand-----")
+def load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh):
 
-    kb.entities = dict(islice(kb.entities.items(), expand_num))
-    node_list = list(kb.entities.keys())
-    relations_to_remove = []
-    for rel in kb.relations:
-        if rel['head'] not in node_list or rel['tail'] not in node_list:
-            relations_to_remove.append(rel)
-    for rel in relations_to_remove:
-        kb.relations.remove(rel)
+    if if_neigh:
+        ex_kb = EX_KB()
+        node_size = len(kb.entities)
+        print(f"-----the original kg has {node_size} entities-----")
+        print(f"-----expect to expand {expand_num} entities and start to expand-----")
 
-    with ThreadPoolExecutor(max_workers=MAX_WORKER) as executor:
-        futures = []
-        for key_label, value in kb.entities.items():
-            entity_link = value['url']
-            futures.append(executor.submit(process_entity, key_label, entity_link, endpoint_url, ex_kb, max_neigh))
+        # del relations if head or tail does not include in entities
+        kb.entities = dict(islice(kb.entities.items(), expand_num))
+        node_list = list(kb.entities.keys())
+        relations_to_remove = []
+        for rel in kb.relations:
+            if rel['head'] not in node_list or rel['tail'] not in node_list:
+                relations_to_remove.append(rel)
+        for rel in relations_to_remove:
+            kb.relations.remove(rel)
 
-        for future in tqdm(as_completed(futures), total=len(futures)):
-            pass
+        with ThreadPoolExecutor(max_workers=MAX_WORKER) as executor:
+            for key_label, value in kb.entities.items():
+                entity_link = value['url']
+                executor.submit(process_entity, entity_link, endpoint_url, ex_kb, max_neigh)
+        return ex_kb, kb
+    else:
+        # del relations if head or tail does not include in entities
+        kb.entities = dict(islice(kb.entities.items(), expand_num))
+        node_list = list(kb.entities.keys())
+        relations_to_remove = []
+        for rel in kb.relations:
+            if rel['head'] not in node_list or rel['tail'] not in node_list:
+                relations_to_remove.append(rel)
+        for rel in relations_to_remove:
+            kb.relations.remove(rel)
+        return " ", kb
 
-    # ex_kb.combine(kb)
-    return ex_kb, kb
 
+def process_entity(entity_link, endpoint_url, ex_kb, max_neigh):
+    subject_label = entity_link.split('/')[-1]
+    subject_id = get_wikidata_id(entity_link)
 
-def process_entity(key_label, entity_link, endpoint_url, ex_kb, max_neigh):
-    entity_key = get_wikidata_id(entity_link)
     query = f"""
-    SELECT DISTINCT ?subjectLabel ?subject ?property ?object WHERE {{
-      VALUES ?subject {{wd:{entity_key}}}
+    SELECT DISTINCT ?subject ?property ?object WHERE {{
+      VALUES ?subject {{wd:{subject_id}}}
       ?subject ?property ?object .
 
       SERVICE wikibase:label {{
@@ -152,4 +165,5 @@ def process_entity(key_label, entity_link, endpoint_url, ex_kb, max_neigh):
     if len(results) > max_neigh:
         results = results[:max_neigh]
 
-    convert_format(ex_kb, results, key_label, endpoint_url)
+    ex_kb.add_entity(entity_link, subject_label)
+    convert_format(subject_label, ex_kb, results, endpoint_url)
