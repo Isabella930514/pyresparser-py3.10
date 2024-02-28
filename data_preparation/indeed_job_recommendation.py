@@ -22,7 +22,7 @@ def main():
     extract_triples.from_text_to_kb(config.TEXT_FILE, config.EXTRACTOR_TYPE, config.IF_NEIGHBOUR,
                                     config.EXPEND_NUM, config.endpoint_url, config.MAX_NEIGH)
     # ---------------------------------------------------
-    kg_predication.link_predication(config.EXTRACTOR_TYPE)
+    kg_predication.link_predication(config.EXTRACTOR_TYPE, config.ENTITY_EMBEDDING_DIM, config.KGE_METHOD)
     # -------- job and skills graph construction ----------
     # ---------------------------------------------------
     j_s_graph = job_skill_graph.job_skill_graph_def(jobs_info)

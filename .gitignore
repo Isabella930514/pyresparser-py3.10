@@ -112,3 +112,8 @@ data_preparation/job-skill.csv
 data_preparation/offer_network.html
 pyresparser/resume_jobs_info.json
 pyresparser/resumes/
+*.exe
+*.npy
+*.pkl
+*.vec
+*.html

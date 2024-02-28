@@ -29,7 +29,11 @@ EXTRACTOR_TYPE = 'REBEL'
 # if extract neighbours from wikipedia
 IF_NEIGHBOUR = True
 # SET the number of expanded-node and max neighours
-EXPEND_NUM = 300
+EXPEND_NUM = 500
 MAX_NEIGH = 10
 # wiki link; WIKI datasets:https://drive.google.com/file/d/1yuEUhkVFIYfMVfpA_crFGfSeJLgbPUxu/view
 endpoint_url = "https://query.wikidata.org/sparql"
+# 'transE','transH.cpp'
+KGE_METHOD = 'transE'
+# triple embedding size
+ENTITY_EMBEDDING_DIM = 50
