@@ -15,6 +15,7 @@ from spacy.matcher import Matcher
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import entity_neighbour_extractor as ene
+from sklearn.model_selection import train_test_split
 
 pd.set_option('display.max_colwidth', 200)
 batch_size = 100
@@ -359,9 +360,35 @@ def save_kg_to_csv(kb, file):
         kg_file.writelines(lines)
 
 
+def split_train_test(file, train_file, test_file, valid_file):
+    with open(file, "r", encoding="utf-8") as f:
+        data_lines = f.readlines()
+    data_tuples = [line.strip().split(';') for line in data_lines]
+    df = pd.DataFrame(data_tuples)
+    train_df, temp_df = train_test_split(df, test_size=0.4, random_state=42)
+    val_df, test_df = train_test_split(temp_df, test_size=0.5, random_state=42)
+    train_df.to_csv(train_file, index=False, header=False)
+    val_df.to_csv(valid_file, index=False, header=False)
+    test_df.to_csv(test_file, index=False, header=False)
+    print("-----already splited -----")
+
+
+def generate_files(model, if_neigh):
+    filename = f"network_{model}.html"
+    path = f"./datasets/{model}"
+    if not os.path.exists(path):
+        os.makedirs(path)
+    file = f"./datasets/{model}/kg_{if_neigh}.csv"
+    train_file = f"{path}/train.csv"
+    test_file = f"{path}/test.csv"
+    valid_file = f"{path}/valid.csv"
+    return file, filename, train_file, test_file, valid_file
+
+
 def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, span_length=25):
     start_time = time.time()
-    directory = "./kb"
+    directory = "./datasets"
+
     if not os.path.exists(directory):
         os.makedirs(directory)
     file_path = os.path.join(directory, f"kb_{model}.pkl")
@@ -380,8 +407,8 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
                 pickle.dump(kb, kb_file)
         print("-----triples extraction complete-----")
 
-        filename = f"network_{model}.html"
-        file = f"./kb/{model}_kg_{if_neigh}.csv"
+        file, filename, train_file, test_file, valid_file = generate_files(model, if_neigh)
+
         if if_neigh:
             extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
             save_network_html(extracted_kb, kb, if_neigh, filename)
@@ -390,6 +417,7 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
             extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
             save_network_html(extracted_kb, kb, if_neigh, filename)
         save_kg_to_csv(kb, file)
+        split_train_test(file, train_file, test_file, valid_file)
         IPython.display.HTML(filename=filename)
 
     if model == 'SPACY':
@@ -403,8 +431,7 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
                 pickle.dump(kb, kb_file)
         print("-----triples extraction complete-----")
 
-        filename = f"network_{model}.html"
-        file = f"./kb/{model}_kg_{if_neigh}.csv"
+        file, filename, train_file, test_file, valid_file = generate_files(model, if_neigh)
 
         if if_neigh:
             extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh)
@@ -414,6 +441,7 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
             extracted_kb = ""
             save_network_html(extracted_kb, kb, if_neigh, filename)
         save_kg_to_csv(kb, file)
+        split_train_test(file, train_file, test_file, valid_file)
         IPython.display.HTML(filename=filename)
 
     end_time = time.time()
