@@ -1,9 +1,5 @@
 import torch
-from dataset import Dataset
-import numpy as np
 from measure import Measure
-from os import listdir
-from os.path import isfile, join
 
 
 class Tester:
@@ -45,7 +41,6 @@ class Tester:
                     sim_scores = self.model(h, r, t).cpu().data.numpy()
                     rank = self.get_rank(sim_scores)
                     self.measure.update(rank, raw_or_fil)
-
         self.measure.normalize(len(self.dataset.data[self.valid_or_test]))
         self.measure.print_()
         return self.measure.mrr["fil"]
@@ -64,8 +59,6 @@ class Tester:
                 tuples.append(tuple(fact))
 
         return tuples
-
-
 
 
 

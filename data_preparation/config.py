@@ -36,4 +36,11 @@ endpoint_url = "https://query.wikidata.org/sparql"
 # 'TransE','TransH','TransR','SimplE'
 KGE_METHOD = 'TransE'
 # triple embedding size
-ENTITY_EMBEDDING_DIM = 50
+ENTITY_EMBEDDING_DIM = 100
+# The entity you want to do the prediction
+entity = "Animation"
+relation = "instance of"
+# The number of potential entities you want to explore based on target node
+POTENTIAL_ENT_NO = 3
+# Wether Prediction
+IF_PRE = True

@@ -1,8 +1,10 @@
-from data_preparation.SimplE import SimplE
+import os
 import torch
 import torch.nn.functional as F
-import os
+from data_preparation.SimplE import SimplE
 from data_preparation.transx.TransE import TransE
+from data_preparation.transx.TransH import TransH
+from data_preparation.transx.TransR import TransR
 
 
 class Trainer:
@@ -12,6 +14,10 @@ class Trainer:
             self.model = TransE(dataset.num_ent(), dataset.num_rel(), args.emb_dim, self.device)
         elif kge_model == "SimplE":
             self.model = SimplE(dataset.num_ent(), dataset.num_rel(), args.emb_dim, self.device)
+        elif kge_model == "TransH":
+            self.model = TransH(dataset.num_ent(), dataset.num_rel(), args.emb_dim, self.device)
+        elif kge_model == "TransR":
+            self.model = TransR(dataset.num_ent(), dataset.num_rel(), args.emb_dim, self.device)
         else:
             raise ValueError("Unsupported KGE model type: {}".format(kge_model))
         self.dataset = dataset

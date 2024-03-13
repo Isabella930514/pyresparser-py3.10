@@ -29,6 +29,8 @@ nlp = spacy.load('en_core_web_sm')
 remove all entities that doesn't have a page on Wikipedia
 merge entities if they have the same wikipedia page
 '''
+
+
 class KB():
     def __init__(self):
         self.entities = {}
@@ -38,10 +40,8 @@ class KB():
     def are_relations_equal(self, r1, r2):
         return all(r1[attr] == r2[attr] for attr in ["head", "type", "tail"])
 
-
     def exists_relation(self, r1):
         return any(self.are_relations_equal(r1, r2) for r2 in self.relations)
-
 
     def merge_relations(self, r1):
         r2 = [r for r in self.relations
@@ -49,7 +49,6 @@ class KB():
         spans_to_add = [span for span in r1["meta"]["spans"]
                         if span not in r2["meta"]["spans"]]
         r2["meta"]["spans"] += spans_to_add
-
 
     def get_wikipedia_data(self, candidate_entity):
         if candidate_entity in self.wiki_cache:
@@ -66,9 +65,8 @@ class KB():
         except:
             return None
 
-
     def add_entity(self, e):
-        self.entities[e["title"]] = {k:v for k,v in e.items() if k != "title"}
+        self.entities[e["title"]] = {k: v for k, v in e.items() if k != "title"}
 
     def add_relation(self, r):
         candidate_entities = [r["head"], r["tail"]]
@@ -87,7 +85,6 @@ class KB():
             self.relations.append(r)
         else:
             self.merge_relations(r)
-
 
     def combine(self, kb):
         for key, value in kb.entities.items():
@@ -134,24 +131,23 @@ def get_entities(sent):
 
 
 def get_relation(sent):
+    doc = nlp(sent)
 
-  doc = nlp(sent)
+    matcher = Matcher(nlp.vocab)
 
-  matcher = Matcher(nlp.vocab)
+    pattern = [{'DEP': 'ROOT'},
+               {'DEP': 'prep', 'OP': "?"},
+               {'DEP': 'agent', 'OP': "?"},
+               {'POS': 'ADJ', 'OP': "?"}]
 
-  pattern = [{'DEP':'ROOT'},
-            {'DEP':'prep','OP':"?"},
-            {'DEP':'agent','OP':"?"},
-            {'POS':'ADJ','OP':"?"}]
+    matcher.add("matching_1", [pattern])
 
-  matcher.add("matching_1", [pattern])
+    matches = matcher(doc)
+    k = len(matches) - 1
 
-  matches = matcher(doc)
-  k = len(matches) - 1
+    span = doc[matches[k][1]:matches[k][2]]
 
-  span = doc[matches[k][1]:matches[k][2]]
-
-  return(span.text)
+    return (span.text)
 
 
 def extract_relations_from_model_output(text):
@@ -199,16 +195,27 @@ def extract_relations_from_model_output(text):
     return relations
 
 
-def save_network_html(extracted_kb, origin_kb, if_neigh, filename):
+def save_network_html(extracted_kb, origin_kb, potent_kb, if_neigh, filename, if_predict):
     net = Network(directed=True, width="2000px", height="1000px", bgcolor="#eeeeee")
 
+    if not if_neigh and if_predict:
+        for e in origin_kb.entities:
+            net.add_node(e, shape="circle", color="#00FF00")
+        for r in origin_kb.relations:
+            net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
+        for ee in potent_kb.entities:
+            try:
+                net.add_node(ee, shape="circle", color="#e24353", size=5)
+            except:
+                continue
 
-    for e in origin_kb.entities:
-        net.add_node(e, shape="circle", color="#00FF00")
-    for r in origin_kb.relations:
-        net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
+        for r in potent_kb.relations:
+            try:
+                net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"], width=5, color="red")
+            except:
+                continue
 
-    if if_neigh == True:
+    if if_neigh and not if_predict:
         for entity in list(origin_kb.entities.keys()):
             if entity in extracted_kb.entities:
                 del extracted_kb.entities[entity]
@@ -223,6 +230,38 @@ def save_network_html(extracted_kb, origin_kb, if_neigh, filename):
                 net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
             except:
                 continue
+    if if_neigh and if_predict:
+        for entity in list(origin_kb.entities.keys()):
+            if entity in extracted_kb.entities:
+                del extracted_kb.entities[entity]
+        for ee in extracted_kb.entities:
+            try:
+                net.add_node(ee, shape="circle", color="#e03112")
+            except:
+                continue
+
+        for r in extracted_kb.relations:
+            try:
+                net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
+            except:
+                continue
+
+        for ee in potent_kb.entities:
+            try:
+                net.add_node(ee, shape="circle", color="#e28743")
+            except:
+                continue
+
+        for r in potent_kb.relations:
+            try:
+                net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"], width=2)
+            except:
+                continue
+
+    for e in origin_kb.entities:
+        net.add_node(e, shape="circle", color="#00FF00")
+    for r in origin_kb.relations:
+        net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
 
     net.repulsion(
         node_distance=200,
@@ -284,7 +323,6 @@ def REBEL_extractor(text, span_length):
             batched_attention_masks.append(attention_mask[start_idx:end_idx])
 
         return batched_input_ids, batched_attention_masks
-
 
     # transform input with spans
     tensor_ids = [inputs["input_ids"][0][boundary[0]:boundary[1]]
@@ -354,7 +392,7 @@ def save_kg_to_csv(kb, file):
     for relation in kb.relations:
         if any(item is None for item in relation.values()):
             continue
-        line = relation['head']+';'+relation['type']+';'+relation['tail']+'\n'
+        line = relation['head'] + ';' + relation['type'] + ';' + relation['tail'] + '\n'
         lines.append(line)
     with open(file, "w", encoding="utf-8") as kg_file:
         kg_file.writelines(lines)
@@ -370,7 +408,7 @@ def split_train_test(file, train_file, test_file, valid_file):
     train_df.to_csv(train_file, index=False, header=False)
     val_df.to_csv(valid_file, index=False, header=False)
     test_df.to_csv(test_file, index=False, header=False)
-    print("-----already splited -----")
+    print("-----already splited into train, valid, and test datasets-----")
 
 
 def generate_files(model, if_neigh):
@@ -411,14 +449,19 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
 
         if if_neigh:
             extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
-            save_network_html(extracted_kb, kb, if_neigh, filename)
+            save_network_html(extracted_kb, kb, '', if_neigh, filename, False)
+            # orginal_kb is the kb extracted from tests
+            original_kb = kb
+            # kb means combined_kb now
             kb.combine(extracted_kb)
         else:
             extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
-            save_network_html(extracted_kb, kb, if_neigh, filename)
+            save_network_html(extracted_kb, kb, '', if_neigh, filename, False)
+            original_kb = kb
         save_kg_to_csv(kb, file)
         split_train_test(file, train_file, test_file, valid_file)
         IPython.display.HTML(filename=filename)
+        return original_kb, extracted_kb, kb, if_neigh
 
     if model == 'SPACY':
         if os.path.exists(file_path):
@@ -434,15 +477,20 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
         file, filename, train_file, test_file, valid_file = generate_files(model, if_neigh)
 
         if if_neigh:
-            extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh)
-            save_network_html(extracted_kb, kb, if_neigh, filename)
+            extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
+            save_network_html(extracted_kb, kb, '', if_neigh, filename, False)
+            # orginal_kb is the kb extracted from tests
+            original_kb = kb
+            # kb means combined_kb now
             kb.combine(extracted_kb)
         else:
-            extracted_kb = ""
-            save_network_html(extracted_kb, kb, if_neigh, filename)
+            extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
+            save_network_html(extracted_kb, kb, '', if_neigh, filename, False)
+            original_kb = kb
         save_kg_to_csv(kb, file)
         split_train_test(file, train_file, test_file, valid_file)
         IPython.display.HTML(filename=filename)
+        return original_kb, extracted_kb, kb, if_neigh
 
     end_time = time.time()
     elapsed_time = end_time - start_time

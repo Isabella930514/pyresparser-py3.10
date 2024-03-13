@@ -1,5 +1,7 @@
+import pandas as pd
 from trainer import Trainer
 from tester import Tester
+from predictor import Predictor
 from dataset import Dataset
 import argparse
 import time
@@ -20,9 +22,11 @@ def get_parameter(nlp_model, embedding_size, kge_model):
     return args
 
 
-def link_predication(nlp_model, embedding_size, kge_model):
+def link_predication(nlp_model, embedding_size, kge_model, entity, relation, number):
     args = get_parameter(nlp_model, embedding_size, kge_model)
     dataset = Dataset(args.dataset)
+    pd.DataFrame.from_dict(data=dataset.ent2id, orient='index').to_csv("./datasets/REBEL/entity_id.csv", header=False)
+    pd.DataFrame.from_dict(data=dataset.rel2id, orient='index').to_csv("./datasets/REBEL/rel_id.csv", header=False)
 
     print(f"-----train data size: {len(dataset.data['train'])}")
     print(f"-----valid data size: {len(dataset.data['valid'])}")
@@ -56,3 +60,9 @@ def link_predication(nlp_model, embedding_size, kge_model):
     best_model_path = "models/" + args.dataset + "/" + best_epoch + ".chkpnt"
     tester = Tester(dataset, best_model_path, "test")
     tester.test()
+
+    print("~~~ Prediction ~~~")
+    best_model_path = "models/" + args.dataset + "/" + best_epoch + ".chkpnt"
+    predictor = Predictor(dataset, best_model_path)
+    final_tuples = predictor.predict(nlp_model, entity, relation, number)
+    return final_tuples

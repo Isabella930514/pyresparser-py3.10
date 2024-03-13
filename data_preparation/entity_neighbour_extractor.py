@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 MAX_WORKER = 64
 
 
-class EX_KB:
+class EX_KB():
 
     def __init__(self):
         self.entities = {}
@@ -114,7 +114,7 @@ def load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh):
         print(f"-----the original kg has {node_size} entities-----")
         print(f"-----expect to expand {expand_num} entities and start to expand-----")
 
-        # del relations if head or tail does not include in entities
+        # del relations if head or tail does not included in entities
         kb.entities = dict(islice(kb.entities.items(), expand_num))
         node_list = list(kb.entities.keys())
         relations_to_remove = []
