@@ -8,7 +8,7 @@ from data_preparation.transx.TransR import TransR
 
 
 class Trainer:
-    def __init__(self, dataset, args, kge_model):
+    def __init__(self, dataset, args, kge_model, is_Optimizer):
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         if kge_model == "TransE":
             self.model = TransE(dataset.num_ent(), dataset.num_rel(), args.emb_dim, self.device)
@@ -22,6 +22,9 @@ class Trainer:
             raise ValueError("Unsupported KGE model type: {}".format(kge_model))
         self.dataset = dataset
         self.args = args
+        self.oprimizer = is_Optimizer
+        self.best_validation_loss = float('inf')
+        self.best_model_path = ''
 
     def train(self, kge_model):
         self.model.train()
@@ -52,8 +55,34 @@ class Trainer:
             print("Loss in iteration " + str(epoch) + ": " + str(
                 total_loss) + "(" + self.dataset.name + " and " + kge_model + ")")
 
-            if epoch % self.args.save_each == 0:
-                self.save_model(epoch)
+            if self.oprimizer:
+                validation_loss = self.validate()
+                if validation_loss < self.best_validation_loss:
+                    self.best_validation_loss = validation_loss
+                return validation_loss
+            else:
+                if epoch % self.args.save_each == 0:
+                    self.save_model(epoch)
+
+    def validate(self):
+        self.model.eval()
+        validation_loss = 0.0
+        total_samples = 0
+
+        with torch.no_grad():
+            last_batch = False
+            while not last_batch:
+                h, r, t, l = self.dataset.next_batch(self.args.batch_size, neg_ratio=self.args.neg_ratio,
+                                                     device=self.device)
+                last_batch = self.dataset.was_last_batch()
+                scores = self.model(h, r, t)
+                loss = torch.sum(F.softplus(-l * scores))
+                validation_loss += loss.cpu().item()
+                total_samples += h.size(0)
+        avg_validation_loss = validation_loss / total_samples
+
+        print(f"Validation Loss: {avg_validation_loss:.4f}")
+        return avg_validation_loss
 
     def save_model(self, chkpnt):
         print("Saving the model")

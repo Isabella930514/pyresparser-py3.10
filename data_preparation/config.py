@@ -34,13 +34,13 @@ MAX_NEIGH = 10
 # wiki link; WIKI datasets:https://drive.google.com/file/d/1yuEUhkVFIYfMVfpA_crFGfSeJLgbPUxu/view
 endpoint_url = "https://query.wikidata.org/sparql"
 # 'TransE','TransH','TransR','SimplE'
-KGE_METHOD = 'TransE'
+KGE_METHOD_LIST = ['TransE', 'TransH', 'TransR', 'SimplE']
 # triple embedding size
 ENTITY_EMBEDDING_DIM = 100
 # The entity you want to do the prediction
 entity = "Animation"
 relation = "instance of"
 # The number of potential entities you want to explore based on target node
-POTENTIAL_ENT_NO = 3
+POTENTIAL_ENT_NO = 10
 # Wether Prediction
 IF_PRE = True

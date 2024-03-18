@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 
 pd.set_option('display.max_colwidth', 200)
 batch_size = 100
-Max_WORKERS = 128
+MAX_WORKERS = 128
 # Load model and tokenizer
 tokenizer = AutoTokenizer.from_pretrained("Babelscape/rebel-large")
 model = AutoModelForSeq2SeqLM.from_pretrained("Babelscape/rebel-large")
@@ -211,7 +211,7 @@ def save_network_html(extracted_kb, origin_kb, potent_kb, if_neigh, filename, if
 
         for r in potent_kb.relations:
             try:
-                net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"], width=5, color="red")
+                net.add_edge(r["head"], r["tail"], title=r["type"], width=5, color="red")
             except:
                 continue
 
@@ -377,7 +377,7 @@ def REBEL_extractor(text, span_length):
             results.append(relation)
         return results
 
-    with ThreadPoolExecutor(max_workers=Max_WORKERS) as executor:
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {executor.submit(process_prediction, (pred, i)): i for i, pred in enumerate(all_decoded_preds)}
         for future in tqdm(as_completed(futures), total=len(futures)):
             results = future.result()

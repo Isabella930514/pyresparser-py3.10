@@ -30,7 +30,7 @@ class Tester:
 
         return self.shred_facts(result)
 
-    def test(self):
+    def test(self, nlp_model, kge_model):
         settings = ["raw", "fil"] if self.valid_or_test == "test" else ["fil"]
 
         for i, fact in enumerate(self.dataset.data[self.valid_or_test]):
@@ -43,6 +43,8 @@ class Tester:
                     self.measure.update(rank, raw_or_fil)
         self.measure.normalize(len(self.dataset.data[self.valid_or_test]))
         self.measure.print_()
+        if self.valid_or_test == "test":
+            self.measure.write(nlp_model, kge_model)
         return self.measure.mrr["fil"]
 
     def shred_facts(self, triples):
