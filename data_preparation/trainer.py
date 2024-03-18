@@ -17,7 +17,7 @@ class Trainer:
         elif kge_model == "TransH":
             self.model = TransH(dataset.num_ent(), dataset.num_rel(), args.emb_dim, self.device)
         elif kge_model == "TransR":
-            self.model = TransR(dataset.num_ent(), dataset.num_rel(), args.emb_dim, self.device)
+            self.model = TransR(dataset.num_ent(), dataset.num_rel(), args.emb_dim, args.emb_dim, self.device)
         else:
             raise ValueError("Unsupported KGE model type: {}".format(kge_model))
         self.dataset = dataset
@@ -62,7 +62,7 @@ class Trainer:
                 return validation_loss
             else:
                 if epoch % self.args.save_each == 0:
-                    self.save_model(epoch)
+                    self.save_model(epoch, kge_model)
 
     def validate(self):
         self.model.eval()
@@ -84,9 +84,9 @@ class Trainer:
         print(f"Validation Loss: {avg_validation_loss:.4f}")
         return avg_validation_loss
 
-    def save_model(self, chkpnt):
+    def save_model(self, chkpnt, kg_model):
         print("Saving the model")
-        directory = "models/" + self.dataset.name + "/"
+        directory = "models/" + self.dataset.name + "/" + kg_model + "/"
         if not os.path.exists(directory):
             os.makedirs(directory)
         torch.save(self.model, directory + str(chkpnt) + ".chkpnt")

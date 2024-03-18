@@ -33,10 +33,11 @@ def main():
                                                                               config.EXPEND_NUM, config.endpoint_url,
                                                                               config.MAX_NEIGH)
     # ---------------------------------------------------
-    potential_tuples = kg_predication.link_predication(config.EXTRACTOR_TYPE,
-                                                       config.KGE_METHOD_LIST, config.entity,
-                                                       config.relation,
-                                                       config.POTENTIAL_ENT_NO, original_kb, extracted_kb, kb, if_neigh)
+    kg_predication.link_predication(config.EXTRACTOR_TYPE,
+                                    config.KGE_METHOD_LIST, config.entity,
+                                    config.relation,
+                                    config.POTENTIAL_ENT_NO, original_kb, extracted_kb, kb, if_neigh)
+    print("~~~~~ Prediction Complete ~~~~~")
 
 
 if __name__ == "__main__":

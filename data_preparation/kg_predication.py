@@ -9,8 +9,10 @@ from tester import Tester
 from predictor import Predictor
 from dataset import Dataset
 
+best_epoch_dict = {}
 
-class POTENT_KB():
+
+class POTENT_KB:
 
     def __init__(self):
         self.entities = {}
@@ -34,7 +36,7 @@ class POTENT_KB():
 
 def objective(trial, dataset, kge_model):
     lr = trial.suggest_loguniform('lr', 1e-4, 1e-1)
-    ne = trial.suggest_categorical('ne', [1000])
+    ne = trial.suggest_categorical('ne', [100, 200, 300, 400, 500])
     emb_dim = trial.suggest_categorical('emb_dim', [100, 200, 300])
     reg_lambda = trial.suggest_loguniform('reg_lambda', 1e-5, 1e-1)
     batch_size = trial.suggest_categorical('batch_size', [16, 32, 64])
@@ -117,7 +119,7 @@ def link_predication(nlp_model, kge_model_list, entity, relation, number, origin
         for epoch in epochs2test:
             start = time.time()
             print(epoch)
-            model_path = "models/" + args.dataset + "/" + epoch + ".chkpnt"
+            model_path = "models/" + args.dataset + "/" + kge_model + "/" + epoch + ".chkpnt"
             tester = Tester(dataset, model_path, "valid")
             mrr = tester.test(nlp_model, kge_model)
             if mrr > best_mrr:
@@ -126,17 +128,24 @@ def link_predication(nlp_model, kge_model_list, entity, relation, number, origin
             print(time.time() - start)
 
         print("Best epoch: " + best_epoch)
+        best_epoch_dict[kge_model] = best_epoch
 
         print("~~~~ Testing on the best epoch ~~~~")
-        best_model_path = "models/" + args.dataset + "/" + best_epoch + ".chkpnt"
+        best_model_path = "models/" + args.dataset + "/" + kge_model + "/" + best_epoch + ".chkpnt"
         tester = Tester(dataset, best_model_path, "test")
         tester.test(nlp_model, kge_model)
 
-        print("~~~ Prediction ~~~")
-        best_model_path = "models/" + args.dataset + "/" + best_epoch + ".chkpnt"
-        predictor = Predictor(dataset, best_model_path)
-        final_tuples = predictor.predict(nlp_model, entity, relation, number)
+    with open(f"./datasets/{nlp_model}/model_comparision.csv", "r") as file:
+        models_info = file.readlines()
+    model_dict = {}
+    for line in models_info:
+        model_list = line.strip().split(',')
+        model_dict[model_list[0]] = model_list[6]
+    outperform_model = [key for key, value in model_dict.items() if value == max(model_dict.values())][0]
+    print(f"~~~ The outperform model is {outperform_model} w best epoch {best_epoch_dict[outperform_model]} ~~~")
 
-        visiual_final_tuple(final_tuples, original_kb, extracted_kb, kb, if_neigh)
-
-        return final_tuples
+    print("~~~ Prediction ~~~")
+    best_model_path = "models/" + nlp_model + "/" + outperform_model + "/" + best_epoch_dict[outperform_model] + ".chkpnt"
+    predictor = Predictor(dataset, best_model_path)
+    final_tuples = predictor.predict(nlp_model, entity, relation, number)
+    visiual_final_tuple(final_tuples, original_kb, extracted_kb, kb, if_neigh)
