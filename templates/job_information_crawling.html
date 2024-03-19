@@ -27,7 +27,7 @@
     <select id="site-dropdown">
         <option value="">Please select</option>
         <option value="seek">Seek</option>
-        <option value="indeed">Indeed</option>
+<!--        <option value="indeed">Indeed</option>-->
     </select>
 </div>
 
@@ -50,6 +50,12 @@
     <button id="search-button">Search</button>
 </div>
 
+<div class="form-item">
+    <button class="back-button" onclick="window.location.href={{url_for('home')}}">Back</button>
+</div>
+
+<div id="response-message"></div>
+
 <script>
     document.getElementById('search-button').addEventListener('click', function() {
         const site = document.getElementById('site-dropdown').value;
@@ -68,9 +74,14 @@
             },
             body: JSON.stringify({site: site, jobTitle: jobTitle, city: city}),
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
         .then(data => {
-            console.log(data.message);
+            document.getElementById('response-message').textContent = data.message;
         })
         .catch((error) => {
             console.error('Error:', error);

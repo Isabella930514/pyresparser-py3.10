@@ -18,7 +18,7 @@ import data_preparation
 max_results_per_city = 100
 # Number of jobs show on each result page
 page_record_limit = 20
-num_pages = 3
+num_pages = 1
 
 
 def information_address(job_information):
@@ -93,25 +93,31 @@ def web_scrape(job_info_dict):
         # Be kind and don't hit indeed server so hard
         time.sleep(3)
         for i in range(num_pages):
-            try:
-                # For each job on the page find its url
-                for job_each in driver.find_elements(By.XPATH, '//*[@class="jcs-JobTitle css-jspxzf eu4oa1w0"]'):
-                    job_link = job_each.get_attribute('href')
-                    job_links.append({'location': location, 'job_link': job_link})
-                print('scraping {} page {}'.format(location, i + 1))
-                # Go next page
-                # driver.find_element_by_link_text('Next »').click()
-                next_button = driver.find_element(By.XPATH, '//*[@data-testid="pagination-page-next"]')
-                next_button.click()
-            except NoSuchElementException as e:
-                # If nothing find, we are at the end of all returned results
-                print(f"{location} finished - error: {e}")
-                break
-            #
-            #     # wait for the close button to be visible and click it
-                wait = WebDriverWait(driver, 50)
-                close_button = wait.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="mosaic-desktopserpjapopup"]/div[1]/button')))
-                close_button.click()
+            if job_info_dict["site"] == "indeed":
+                try:
+                    # For each job on the page find its url
+                    for job_each in driver.find_elements(By.XPATH, '//*[@data-tn-element="jobTitle"]'):
+                        job_link = job_each.get_attribute('href')
+                        job_links.append({'location': location, 'job_link': job_link})
+                    print('scraping {} page {}'.format(location, i + 1))
+                    # Go next page
+                    next_button = driver.find_element(By.XPATH, '//*[@data-testid="pagination-page-next"]')
+                    next_button.click()
+                except NoSuchElementException:
+                    # If nothing find, we are at the end of all returned results
+                    print("{} finished".format(location))
+                    break
+            else:
+                try:
+                    for job_each in driver.find_elements(By.XPATH, '//*[@class="y735df0 y735dff  y735df0 y735dff _1iz8dgs5i _1iz8dgsj _1iz8dgsk _1iz8dgsl _1iz8dgsm _1iz8dgs7"]'):
+                        job_link = job_each.get_attribute('href')
+                        job_links.append({'location': location, 'job_link': job_link})
+                    print('scraping {} page {}'.format(location, i + 1))
+                    next_button = driver.find_element(By.XPATH, '//a[@aria-label="Next"]')
+                    next_button.click()
+                except NoSuchElementException as e:
+                    print(f"{location} finished - error: {e}")
+                    break
             time.sleep(3)
     # Write all jobs links to a json file so it can be reused later
     with open(data_preparation.config.JOBS_LINKS_JSON_FILE, 'w') as fp:
@@ -129,14 +135,21 @@ def web_scrape(job_info_dict):
         driver.get(link)
         # Job city and province
         location = job_lk['location']
-        # Job title
-        title = driver.find_element(By.CLASS_NAME, 'jobsearch-JobInfoHeader-title').text
-        # Job company
-        company = driver.find_element(By.XPATH,
-                                      '//*[@id="viewJobSSRRoot"]/div/div[2]/div/div/div[1]/div[2]/div[1]/div[2]/div/div/div/div[1]/div/span/a').text
-        # Job description
-        desc = driver.find_element(By.ID, 'jobDescriptionText').text
-        jobs_info.append({'link': link, 'location': location, 'title': title, 'company': company, 'desc': desc})
+
+        if job_info_dict["site"] == "seek":
+            # Job title
+            title = driver.find_element(By.XPATH, '//h1[@data-automation="job-detail-title"]').text
+            # Job company
+            company = driver.find_element(By.XPATH, '//*[@data-automation="advertiser-name"]').text
+            # Job description
+            desc = driver.find_element(By.XPATH, '//*[@data-automation="jobAdDetails"]').text
+            jobs_info.append({'link': link, 'location': location, 'title': title, 'company': company, 'desc': desc})
+        else:
+            title = driver.find_element(By.CLASS_NAME, '//*[@class="icl-u-xs-mb--xs icl-u-xs-mt--none jobsearch-JobInfoHeader-title"]').text
+            company = driver.find_element(By.XPATH, '//*[@class="icl-u-lg-mr--sm icl-u-xs-mr--xs"]').text
+            desc = driver.find_element(By.ID, '//*[@class="jobsearch-JobComponent-description icl-u-xs-mt--md"]').text
+            jobs_info.append({'link': link, 'location': location, 'title': title, 'company': company, 'desc': desc})
+
     # Write all jobs info to a json file so it can be re-used later
     with open(data_preparation.config.JOBS_INFO_JSON_FILE, 'w') as fp:
         json.dump(jobs_info, fp)

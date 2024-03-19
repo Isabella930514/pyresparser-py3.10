@@ -25,7 +25,7 @@ def search_jobs():
     # -------- job and skills graph construction ----------
     # ---------------------------------------------------
     job_skill_graph.job_skill_graph_def(jobs_info)
-    return jsonify({"message": "Job search initiated successfully."})
+    return jsonify({"message": "Job search and Job-Skill Graph Construction successfully. Please check the download files!!"})
 
 
 if __name__ == '__main__':

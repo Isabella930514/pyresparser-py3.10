@@ -35,6 +35,7 @@ def calculate_final_score(group):
 
     return final_score
 
+
 def job_skill_graph_def(job_info_list):
     """
         we have three methods to calculate relationship between job and skills:
@@ -133,7 +134,7 @@ def senti_skills(job, job_description, skills_list):
         for sentence in blob.sentences:
             if skill in sentence.string.lower():
                 sentiment_list.append(sentence.sentiment.polarity)
-        avg_sentiment = sum(sentiment_list)/len(sentiment_list)
+        avg_sentiment = sum(sentiment_list) / len(sentiment_list)
         skill_sentiment[skill] = round(avg_sentiment, 3)
 
     df_senti = pd.DataFrame(list(skill_sentiment.items()), columns=['Skill', 'Senti'])
@@ -142,6 +143,7 @@ def senti_skills(job, job_description, skills_list):
     df_senti = df_senti.sort_values(by='Senti', ascending=False)
 
     return df_senti
+
 
 def TF_IDF_skills(job, job_description, skills_list):
     # separate the job des into multiple sentences
