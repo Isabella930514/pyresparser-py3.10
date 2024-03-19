@@ -116,4 +116,3 @@ pyresparser/resumes/
 *.npy
 *.pkl
 *.vec
-*.html

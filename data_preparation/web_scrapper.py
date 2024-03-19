@@ -12,41 +12,54 @@ from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 import time, os
-import config
+import data_preparation
 
 # We only collect max 500 jobs from each city
 max_results_per_city = 100
 # Number of jobs show on each result page
-page_record_limit = 10
-num_pages = 1
+page_record_limit = 20
+num_pages = 3
 
 
-def get_jobs_info(search_location):
-    '''
+def information_address(job_information):
+    job_info_dict = {}
+    job_list = job_information.strip("{").strip("}").split(',')
+    for info in job_list:
+        type_list = info.strip().split(':')
+        job_info_dict[type_list[0]] = type_list[1]
+    cleaned_dict = {key.strip('"'): value.strip('"') for key, value in job_info_dict.items()}
+
+    return cleaned_dict
+
+
+def get_jobs_info(job_information):
+    """
     Scrape from web or read from saved file
     Input:
         search_location - search job in a certain city. Input from commond line.
     Output:
         jobs_info - a list that has info of each job i.e. link, location, title, company, salary, desc
-    '''
-    exists = os.path.isfile(config.JOBS_INFO_JSON_FILE)
+    """
+
+    job_info_dict = information_address(job_information)
+    exists = os.path.isfile(data_preparation.config.JOBS_INFO_JSON_FILE)
     if exists:
-        with open(config.JOBS_INFO_JSON_FILE, 'r') as fp:
+        with open(data_preparation.config.JOBS_INFO_JSON_FILE, 'r') as fp:
             jobs_info = json.load(fp)
     else:
-        jobs_info = web_scrape(search_location)
+        jobs_info = web_scrape(job_info_dict)
     return jobs_info
 
 
-def web_scrape(search_location):
-    '''
+def web_scrape(job_info_dict):
+    """
     Scrape jobs from indeed.nz
     When scraping web, be kind and patient
     Input:
         search_location - search job in a certain city. Input from commond line.
     Output:
         jobs_info - a list that has info of each job i.e. link, location, title, company, salary, desc
-    '''
+    """
     # urls of all jobs
     job_links = []
     # Record time for web scraping
@@ -54,23 +67,24 @@ def web_scrape(search_location):
 
     # *** Disable all JS plugins on the site ***
     chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_experimental_option("prefs", {
-        "profile.managed_default_content_settings.javascript": 2
-    })
+    # chrome_options.add_experimental_option("prefs", {
+    #     "profile.managed_default_content_settings.javascript": 2
+    # })
 
     # Launch webdriver
     driver = webdriver.Chrome(options=chrome_options)
-    job_locations = config.JOB_LOCATIONS
-    # If search location is defined, only search that location
-    if (len(search_location) > 0):
-        job_locations = [search_location]
+    job_locations = [job_info_dict["city"]]
 
     # *** Extract all job urls ***
+    target_job = job_info_dict["jobTitle"].replace(" ", "+")
     for location in job_locations:
-        '''indeed searching'''
-        url = 'https://nz.indeed.com/jobs?q=' + config.JOB_SEARCH_WORDS + '&l=' + location + '&limit=' + str(page_record_limit) + '&fromage=' + str(config.DAY_RANGE)
-        # '''seek searching'''
-        # url = 'https://www.seek.co.nz/' + config.JOB_SEARCH_WORDS + '-jobs/in-' + location
+        if job_info_dict["site"] == "seek":
+            '''seek searching'''
+            url = 'https://www.seek.co.nz/' + target_job + '-jobs/in-' + location
+        else:
+            '''indeed searching'''
+            url = 'https://nz.indeed.com/jobs?q=' + target_job + '&l=' + location + '&limit=' + str(
+                page_record_limit) + '&fromage=' + str(data_preparation.config.DAY_RANGE)
 
         # Set timeout
         driver.set_page_load_timeout(150)
@@ -89,18 +103,18 @@ def web_scrape(search_location):
                 # driver.find_element_by_link_text('Next »').click()
                 next_button = driver.find_element(By.XPATH, '//*[@data-testid="pagination-page-next"]')
                 next_button.click()
-            except NoSuchElementException:
+            except NoSuchElementException as e:
                 # If nothing find, we are at the end of all returned results
-                print("{} finished".format(location))
+                print(f"{location} finished - error: {e}")
                 break
             #
             #     # wait for the close button to be visible and click it
-            #     wait = WebDriverWait(driver, 50)
-            #     close_button = wait.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="mosaic-desktopserpjapopup"]/div[1]/button')))
-            #     close_button.click()
+                wait = WebDriverWait(driver, 50)
+                close_button = wait.until(EC.visibility_of_element_located((By.XPATH, '//*[@id="mosaic-desktopserpjapopup"]/div[1]/button')))
+                close_button.click()
             time.sleep(3)
     # Write all jobs links to a json file so it can be reused later
-    with open(config.JOBS_LINKS_JSON_FILE, 'w') as fp:
+    with open(data_preparation.config.JOBS_LINKS_JSON_FILE, 'w') as fp:
         json.dump(job_links, fp)
 
     # ***Go through each job url and gather detailed job info ***
@@ -118,13 +132,13 @@ def web_scrape(search_location):
         # Job title
         title = driver.find_element(By.CLASS_NAME, 'jobsearch-JobInfoHeader-title').text
         # Job company
-        company = driver.find_element(By.XPATH, '//*[@id="viewJobSSRRoot"]/div/div[2]/div/div/div[1]/div[2]/div[1]/div[2]/div/div/div/div[1]/div/span/a').text
+        company = driver.find_element(By.XPATH,
+                                      '//*[@id="viewJobSSRRoot"]/div/div[2]/div/div/div[1]/div[2]/div[1]/div[2]/div/div/div/div[1]/div/span/a').text
         # Job description
         desc = driver.find_element(By.ID, 'jobDescriptionText').text
-        jobs_info.append(
-            {'link': link, 'location': location, 'title': title, 'company': company, 'desc': desc})
+        jobs_info.append({'link': link, 'location': location, 'title': title, 'company': company, 'desc': desc})
     # Write all jobs info to a json file so it can be re-used later
-    with open(config.JOBS_INFO_JSON_FILE, 'w') as fp:
+    with open(data_preparation.config.JOBS_INFO_JSON_FILE, 'w') as fp:
         json.dump(jobs_info, fp)
     # Close and quit webdriver
     driver.quit()
@@ -132,5 +146,5 @@ def web_scrape(search_location):
     # Calculate web scaping time
     scaping_time = (end - start) / 60.
     print(
-        'Took {0:.2f} minutes scraping {1:d} data scientist/engineer/analyst jobs'.format(scaping_time, len(jobs_info)))
+        'Took {0:.2f} minutes scraping {1:d} jobs'.format(scaping_time, len(jobs_info)))
     return jobs_info

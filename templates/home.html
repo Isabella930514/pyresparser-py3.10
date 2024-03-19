@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caito.AI Workforce Management System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .welcome-label {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .action-button {
+            font-size: 18px;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="welcome-label">Welcome to Caito.AI Workforce Management System</div>
+    <div>
+         <button class="action-button" onclick="window.location.href={{url_for('job_information_crawling')}}">Job Information Extraction</button>
+        <button class="action-button" onclick="window.location.href='resume_information_extraction.html'">Resume Information Extraction</button>
+        <button class="action-button" onclick="window.location.href='information_conversion.html'">Information Conversion</button>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Information Crawling Interface</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .form-item {
+            margin-bottom: 10px;
+        }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Job Information Crawling Interface</h2>
+
+<div class="form-item">
+    <label for="site-dropdown">Select Job Site:</label>
+    <select id="site-dropdown">
+        <option value="">Please select</option>
+        <option value="seek">Seek</option>
+        <option value="indeed">Indeed</option>
+    </select>
+</div>
+
+<div class="form-item">
+    <label for="job-title">Job Title Keyword:</label>
+    <input type="text" id="job-title" name="job-title">
+</div>
+
+<div class="form-item">
+    <label for="city-dropdown">Select City:</label>
+    <select id="city-dropdown">
+        <option value="all">All Cities</option>
+        <option value="Auckland">Auckland</option>
+        <option value="Christchurch">Christchurch</option>
+        <option value="Wellington">Wellington</option>
+    </select>
+</div>
+
+<div class="form-item">
+    <button id="search-button">Search</button>
+</div>
+
+<script>
+    document.getElementById('search-button').addEventListener('click', function() {
+        const site = document.getElementById('site-dropdown').value;
+        const jobTitle = document.getElementById('job-title').value.trim();
+        const city = document.getElementById('city-dropdown').value;
+
+        if (!site || !jobTitle || !city) {
+            console.error('Error: Please make sure all fields are filled out correctly.');
+            return;
+        }
+
+        fetch('/search_jobs_info', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({site: site, jobTitle: jobTitle, city: city}),
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data.message);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+});
+</script>
+
+</body>
+</html>

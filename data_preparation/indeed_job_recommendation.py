@@ -1,5 +1,5 @@
 import sys
-import config, web_scrapper, job_skill_graph, extract_triples, kg_predication
+import config, extract_triples, kg_predication
 
 
 def main():
@@ -12,14 +12,7 @@ def main():
         else:
             sys.exit('*** Please try again. *** \nEither leave it blank or input a city from this list:\n{}'.format(
                 '\n'.join(config.JOB_LOCATIONS)))
-    # ---------------------------------------------------
-    # ---- Scrape from web or read from local saved -----
-    # ---------------------------------------------------
-    # jobs_info = web_scrapper.get_jobs_info(location)
-    # ---------------------------------------------------
-    # -------- job and skills graph construction ----------
-    # ---------------------------------------------------
-    # j_s_graph = job_skill_graph.job_skill_graph_def(jobs_info)
+
     # ---- flexible extract triples from text and kg augmentation-----
     # ---------------------------------------------------
     '''
@@ -32,7 +25,7 @@ def main():
                                                                               config.IF_NEIGHBOUR,
                                                                               config.EXPEND_NUM, config.endpoint_url,
                                                                               config.MAX_NEIGH)
-    # ---------------------------------------------------
+    # ---------- knowledge graph prediction by specific node and rel --------
     kg_predication.link_predication(config.EXTRACTOR_TYPE,
                                     config.KGE_METHOD_LIST, config.entity,
                                     config.relation,

@@ -9,7 +9,7 @@ WEBDRIVER_PATH = r'./data_preparation/chromedriver_win32/chromedriver.exe'
 # Cities to search: 6 largest Canadian cities
 JOB_LOCATIONS = ['Auckland']
 # Seach "data scientist" OR "data+engineer" OR "data+analyst" with quotation marks
-# JOB_SEARCH_WORDS = 'data+scientist+or+data+engineer+or+data+analyst+or+developer+' \
+#   = 'data+scientist+or+data+engineer+or+data+analyst+or+developer+' \
 #                    'or+AI+engineer+or+business+intelligence+or+SQL+developer'
 JOB_SEARCH_WORDS = 'data+or+scientist'
 # To avoid same job posted multiple times, we only look back for 30 days
