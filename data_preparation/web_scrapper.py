@@ -11,11 +11,12 @@ import random, json
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
-import time, os
+import time
+import os
 import data_preparation
 
 # We only collect max 500 jobs from each city
-max_results_per_city = 100
+max_results_per_city = 3
 # Number of jobs show on each result page
 page_record_limit = 20
 num_pages = 1
@@ -42,9 +43,11 @@ def get_jobs_info(job_information):
     """
 
     job_info_dict = information_address(job_information)
-    exists = os.path.isfile(data_preparation.config.JOBS_INFO_JSON_FILE)
+    home_dir = os.path.expanduser("~")
+    filepath = os.path.join(home_dir, "indeed_jobs_info.json")
+    exists = os.path.isfile(filepath)
     if exists:
-        with open(data_preparation.config.JOBS_INFO_JSON_FILE, 'r') as fp:
+        with open(filepath, 'r') as fp:
             jobs_info = json.load(fp)
     else:
         jobs_info = web_scrape(job_info_dict)
@@ -120,7 +123,9 @@ def web_scrape(job_info_dict):
                     break
             time.sleep(3)
     # Write all jobs links to a json file so it can be reused later
-    with open(data_preparation.config.JOBS_LINKS_JSON_FILE, 'w') as fp:
+    home_dir = os.path.expanduser("~")
+    filepath = os.path.join(home_dir, "indeed_jobs_links.json")
+    with open(filepath, 'w') as fp:
         json.dump(job_links, fp)
 
     # ***Go through each job url and gather detailed job info ***
@@ -151,13 +156,14 @@ def web_scrape(job_info_dict):
             jobs_info.append({'link': link, 'location': location, 'title': title, 'company': company, 'desc': desc})
 
     # Write all jobs info to a json file so it can be re-used later
-    with open(data_preparation.config.JOBS_INFO_JSON_FILE, 'w') as fp:
+    filepath = os.path.join(home_dir, "indeed_jobs_info.json")
+    with open(filepath, 'w') as fp:
         json.dump(jobs_info, fp)
+
     # Close and quit webdriver
     driver.quit()
     end = time.time()  # end time
     # Calculate web scaping time
     scaping_time = (end - start) / 60.
-    print(
-        'Took {0:.2f} minutes scraping {1:d} jobs'.format(scaping_time, len(jobs_info)))
+    print('Took {0:.2f} minutes scraping {1:d} jobs'.format(scaping_time, len(jobs_info)))
     return jobs_info

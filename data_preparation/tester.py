@@ -1,5 +1,5 @@
 import torch
-from measure import Measure
+from data_preparation.measure import Measure
 
 
 class Tester:

@@ -2,9 +2,96 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Conversion, Augmentation, and Prediction Interface</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .form-item, .upload-info, .results {
+            margin-bottom: 20px;
+        }
+        #kg-display {
+            border: 1px solid #ccc;
+            height: 200px; /* Adjust as necessary */
+            overflow: auto;
+        }
+    </style>
 </head>
 <body>
+
+<h2>Graph Conversion, Augmentation, and Prediction Interface</h2>
+
+<div class="form-item">
+    <label for="upload-file">Please upload the file with converted content (CSV format)</label>
+    <input type="file" id="upload-file" name="upload-file" accept=".csv">
+</div>
+
+
+<div class="form-item">
+    <label>I want to augment KG</label>
+    <button id="augmentation-button">Augmentation</button>
+    <span id="augmentation-check" style="color: green; display: none;">✔</span>
+</div>
+
+
+<div class="form-item">
+    <button id="convert-button">Convert</button>
+</div>
+
+<script>
+    let augmentationClicked = false;
+
+    document.getElementById('augmentation-button').addEventListener('click', function() {
+        augmentationClicked = !augmentationClicked;  // Toggle the boolean value
+        const checkMark = document.getElementById('augmentation-check');
+        if (augmentationClicked) {
+            checkMark.style.display = 'inline';  // Show the checkmark if augmentation is clicked
+        } else {
+            checkMark.style.display = 'none';  // Hide the checkmark if augmentation is not clicked
+        }
+    });
+
+    document.getElementById('convert-button').addEventListener('click', function() {
+    const fileInput = document.getElementById('upload-file');
+    const files = fileInput.files;
+    const formData = new FormData();
+
+    if (files.length === 0) {
+        console.error('No file selected.');
+        return;
+    }
+
+    formData.append('file', files[0]);
+    formData.append('augment', augmentationClicked.toString());
+
+    fetch('/convert_and_augment', {
+        method: 'POST',
+        body: formData,
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Redirect to the URL provided by the server
+            window.location.href = '/network.html';
+        } else {
+            // Handle errors based on the JSON object returned from the server
+            console.error('Error:', data.error);
+        }
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+});
+
+
+</script>
 
 </body>
 </html>

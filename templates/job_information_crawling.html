@@ -56,36 +56,63 @@
 
 <div id="response-message"></div>
 
+<table id="job-info-table">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Company</th>
+            <th>Location</th>
+            <th>Description</th>
+            <th>Link</th>
+        </tr>
+    </thead>
+    <tbody>
+
+    </tbody>
+</table>
+
 <script>
-    document.getElementById('search-button').addEventListener('click', function() {
-        const site = document.getElementById('site-dropdown').value;
-        const jobTitle = document.getElementById('job-title').value.trim();
-        const city = document.getElementById('city-dropdown').value;
+document.getElementById('search-button').addEventListener('click', function() {
+    const site = document.getElementById('site-dropdown').value;
+    const jobTitle = document.getElementById('job-title').value.trim();
+    const city = document.getElementById('city-dropdown').value;
 
-        if (!site || !jobTitle || !city) {
-            console.error('Error: Please make sure all fields are filled out correctly.');
-            return;
-        }
+    if (!site || !jobTitle || !city) {
+        console.error('Error: Please make sure all fields are filled out correctly.');
+        return;
+    }
 
-        fetch('/search_jobs_info', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({site: site, jobTitle: jobTitle, city: city}),
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            document.getElementById('response-message').textContent = data.message;
-        })
-        .catch((error) => {
-            console.error('Error:', error);
+    fetch('/search_jobs_info', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            site: site,
+            jobTitle: jobTitle,
+            city: city
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        const tbody = document.getElementById('job-info-table').querySelector('tbody');
+        tbody.innerHTML = ''; // Clear existing rows
+
+        // Assuming data.jobs_info is the array containing job information
+        if (Array.isArray(data) && data.length > 0) {
+        data.forEach(job => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>${job.title}</td><td>${job.company}</td><td>${job.location}</td><td>${job.desc}</td><td>${job.link}</td>`;
+            tbody.appendChild(row);
         });
+        } else {
+            document.getElementById('response-message').textContent = 'No jobs found.';
+        }
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+        document.getElementById('response-message').textContent = 'Error fetching job information.';
+    });
 });
 </script>
 

@@ -3,11 +3,11 @@ import optuna
 import time
 import config
 import pandas as pd
-import extract_triples
-from trainer import Trainer
-from tester import Tester
-from predictor import Predictor
-from dataset import Dataset
+from data_preparation import extract_triples
+from data_preparation.trainer import Trainer
+from data_preparation.tester import Tester
+from data_preparation.predictor import Predictor
+from data_preparation.dataset import Dataset
 
 best_epoch_dict = {}
 

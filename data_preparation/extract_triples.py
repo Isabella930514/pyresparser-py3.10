@@ -1,4 +1,5 @@
 import math
+import os
 import os.path
 import time
 import torch
@@ -14,12 +15,11 @@ from pyvis.network import Network
 from spacy.matcher import Matcher
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import entity_neighbour_extractor as ene
+from data_preparation import entity_neighbour_extractor as ene
 from sklearn.model_selection import train_test_split
 
 pd.set_option('display.max_colwidth', 200)
 batch_size = 100
-MAX_WORKERS = 128
 # Load model and tokenizer
 tokenizer = AutoTokenizer.from_pretrained("Babelscape/rebel-large")
 model = AutoModelForSeq2SeqLM.from_pretrained("Babelscape/rebel-large")
@@ -31,7 +31,7 @@ merge entities if they have the same wikipedia page
 '''
 
 
-class KB():
+class KB:
     def __init__(self):
         self.entities = {}
         self.relations = []
@@ -60,7 +60,7 @@ class KB():
                 "url": page.url,
                 "summary": page.summary
             }
-            self.wiki_cache[candidate_entity] = entity_data  # 更新缓存
+            self.wiki_cache[candidate_entity] = entity_data
             return entity_data
         except:
             return None
@@ -377,8 +377,9 @@ def REBEL_extractor(text, span_length):
             results.append(relation)
         return results
 
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         futures = {executor.submit(process_prediction, (pred, i)): i for i, pred in enumerate(all_decoded_preds)}
+        # find url and summary for target nodes on wikidata
         for future in tqdm(as_completed(futures), total=len(futures)):
             results = future.result()
             for relation in results:
@@ -412,7 +413,7 @@ def split_train_test(file, train_file, test_file, valid_file):
 
 
 def generate_files(model, if_neigh):
-    filename = f"network_{model}.html"
+    filename = f"./templates/network.html"
     path = f"./datasets/{model}"
     if not os.path.exists(path):
         os.makedirs(path)
@@ -440,6 +441,7 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
                 lines = file_content.readlines()
                 lines = [line.strip() for line in lines[1:]]
                 text = ' '.join(lines)
+            # generate .pkl file with original kg from text
             kb = REBEL_extractor(text, span_length)
             with open(file_path, "wb") as kb_file:
                 pickle.dump(kb, kb_file)
@@ -450,7 +452,7 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
         if if_neigh:
             extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
             save_network_html(extracted_kb, kb, '', if_neigh, filename, False)
-            # orginal_kb is the kb extracted from tests
+            # original_kb is the kb extracted from tests
             original_kb = kb
             # kb means combined_kb now
             kb.combine(extracted_kb)

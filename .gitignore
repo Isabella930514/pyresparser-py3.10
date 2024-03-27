@@ -116,3 +116,5 @@ pyresparser/resumes/
 *.npy
 *.pkl
 *.vec
+
+*.chkpnt
