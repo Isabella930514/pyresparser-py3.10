@@ -94,7 +94,6 @@ def convert_format(subject_label, ex_kb, results, endpoint_url):
         ex_kb.add_relation(subject_label, property_label, object_label, [{'start': 0, 'end': 0}])
 
 
-
 def get_wikidata_id(wikipedia_url):
     response = requests.get(wikipedia_url)
     soup = BeautifulSoup(response.content, 'html.parser')
@@ -115,7 +114,7 @@ def load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh):
         print(f"-----expect to expand {expand_num} entities and start to expand-----")
 
         # del relations if head or tail does not included in entities
-        kb.entities = dict(islice(kb.entities.items(), expand_num))
+        # kb.entities = dict(islice(kb.entities.items(), expand_num))
         node_list = list(kb.entities.keys())
         relations_to_remove = []
         for rel in kb.relations:
@@ -131,7 +130,6 @@ def load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh):
         return ex_kb, kb
     else:
         # del relations if head or tail does not include in entities
-        kb.entities = dict(islice(kb.entities.items(), expand_num))
         node_list = list(kb.entities.keys())
         relations_to_remove = []
         for rel in kb.relations:

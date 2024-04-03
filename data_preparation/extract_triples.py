@@ -1,3 +1,4 @@
+import itertools
 import math
 import os
 import os.path
@@ -8,6 +9,7 @@ import pickle
 import spacy
 import wikipedia
 import IPython
+import requests
 from tqdm import tqdm
 from datetime import datetime as dt
 from IPython.display import HTML
@@ -29,6 +31,15 @@ nlp = spacy.load('en_core_web_sm')
 remove all entities that doesn't have a page on Wikipedia
 merge entities if they have the same wikipedia page
 '''
+
+
+def chunked_iterable(iterable, size):
+    it = iter(iterable)
+    while True:
+        chunk = tuple(itertools.islice(it, size))
+        if not chunk:
+            break
+        yield chunk
 
 
 class KB:
@@ -58,7 +69,7 @@ class KB:
             entity_data = {
                 "title": page.title,
                 "url": page.url,
-                "summary": page.summary
+                "summary": ''
             }
             self.wiki_cache[candidate_entity] = entity_data
             return entity_data
@@ -68,18 +79,86 @@ class KB:
     def add_entity(self, e):
         self.entities[e["title"]] = {k: v for k, v in e.items() if k != "title"}
 
-    def add_relation(self, r):
-        candidate_entities = [r["head"], r["tail"]]
-        entities = [self.get_wikipedia_data(ent) for ent in candidate_entities]
+    # get unique entity from wikipedia
+    def process_entity(self, triple_list):
+        entity_list = []
+        for triple_l in triple_list:
+            for triple_dic in triple_l:
+                head = triple_dic["head"]
+                tail = triple_dic["tail"]
+                entity_list.append(head)
+                entity_list.append(tail)
 
-        if any(ent is None for ent in entities):
+        entities_to_match = set([entity for entity in entity_list if entity not in self.wiki_cache])
+
+        if not entities_to_match:
+            # All entities were cached, no need to make a request
+            return [self.wiki_cache[entity] for entity in entity_list]
+
+        # batch_process
+        chunks = chunked_iterable(entities_to_match, 10)
+        for chunk in chunks:
+            titles = '|'.join(chunk)
+            query_to_title_map = {query: None for query in chunk}
+
+            url = 'https://en.wikipedia.org/w/api.php'
+            params = {
+                'action': 'query',
+                'format': 'json',
+                'titles': titles,
+                'prop': 'info|extracts',
+                'inprop': 'url',
+                'exintro': True,
+                'explaintext': True,
+            }
+
+            response = requests.get(url, params=params)
+            if not response.ok:
+                return None
+
+            pages = response.json().get('query', {}).get('pages', {})
+            for page_id, page_data in pages.items():
+                # cannot find the page
+                try:
+                    if page_data["title"] == "" or page_data["title"].isdigit():
+                        continue
+                except:
+                    print(page_data)
+                title = page_data.get('title', '')
+                page_url = page_data.get('fullurl', '')
+                summary = page_data.get('extract', '')
+
+                for query, mapped_title in query_to_title_map.items():
+                    if mapped_title is None and title.lower() == query.lower():
+                        query_to_title_map[query] = title
+
+                entity_data = {
+                    "title": title,
+                    "url": page_url,
+                    "summary": summary
+                }
+
+                original_query = next((k for k, v in query_to_title_map.items() if v == title), title)
+                self.wiki_cache[original_query] = entity_data
+
+    def add_relation(self, r):
+        if r["head"] == r["tail"]:
             return
 
-        for e in entities:
-            self.add_entity(e)
+        candidate_entities = [r["head"], r["tail"]]
 
-        r["head"] = entities[0]["title"]
-        r["tail"] = entities[1]["title"]
+        for ent in candidate_entities:
+            if ent not in self.wiki_cache.keys():
+                return
+
+        for e in candidate_entities:
+            e_v = self.wiki_cache[e]
+            self.add_entity(e_v)
+
+        entity_detail = self.wiki_cache[candidate_entities[0]]
+        r["head"] = entity_detail["title"]
+        entity_detail = self.wiki_cache[candidate_entities[1]]
+        r["tail"] = entity_detail["title"]
 
         if not self.exists_relation(r):
             self.relations.append(r)
@@ -111,17 +190,17 @@ def get_entities(sent):
                 if prv_tok_dep == "compound":
                     prefix = prv_tok_text + " " + tok.text
 
-            if tok.dep_.endswith("mod") == True:
+            if tok.dep_.endswith("mod"):
                 modifier = tok.text
                 if prv_tok_dep == "compound":
                     modifier = prv_tok_text + " " + tok.text
 
-            if tok.dep_.find("subj") == True:
+            if tok.dep_.find("subj"):
                 ent1 = modifier + " " + prefix + " " + tok.text
                 prefix = ""
                 modifier = ""
 
-            if tok.dep_.find("obj") == True:
+            if tok.dep_.find("obj"):
                 ent2 = modifier + " " + prefix + " " + tok.text
 
             prv_tok_dep = tok.dep_
@@ -294,7 +373,7 @@ def SPACY_extractor(candidate_sentences):
     return kb
 
 
-def REBEL_extractor(text, span_length):
+def REBEL_extractor(model_name, text, span_length):
     # tokenize whole text
     inputs = tokenizer([text], return_tensors="pt")
 
@@ -348,7 +427,7 @@ def REBEL_extractor(text, span_length):
     all_decoded_preds = []
     batch_num = len(batched_input_ids)
     print(f"----total has {batch_num} batches-----")
-    print("-----start to run model-----")
+    print(f"-----start to run {model_name} extractor model-----")
 
     for index, (input_ids_batch, attention_mask_batch) in enumerate(zip(batched_input_ids, batched_attention_masks)):
         batch_inputs = {
@@ -377,14 +456,17 @@ def REBEL_extractor(text, span_length):
             results.append(relation)
         return results
 
+    relation_list = []
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         futures = {executor.submit(process_prediction, (pred, i)): i for i, pred in enumerate(all_decoded_preds)}
         # find url and summary for target nodes on wikidata
         for future in tqdm(as_completed(futures), total=len(futures)):
-            results = future.result()
-            for relation in results:
-                kb.add_relation(relation)
-
+            if len(future.result()) != 0:
+                relation_list.append(future.result())
+    kb.process_entity(relation_list)
+    for relation in relation_list:
+        for item in relation:
+            kb.add_relation(item)
     return kb
 
 
@@ -442,7 +524,7 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
                 lines = [line.strip() for line in lines[1:]]
                 text = ' '.join(lines)
             # generate .pkl file with original kg from text
-            kb = REBEL_extractor(text, span_length)
+            kb = REBEL_extractor(model, text, span_length)
             with open(file_path, "wb") as kb_file:
                 pickle.dump(kb, kb_file)
         print("-----triples extraction complete-----")
