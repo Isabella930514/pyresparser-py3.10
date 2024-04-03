@@ -70,6 +70,7 @@ def convert_and_augment():
     # check file in request
     file = request.files['file']
     augment = request.form['augment']
+    model = request.form['model']
 
     if file.filename == '':
         return jsonify({"error": "No selected file"}), 400
@@ -81,10 +82,10 @@ def convert_and_augment():
 
         if augment == 'false':
             augment_bool = False
-            indeed_job_recommendation.convert_kg(save_path, augment_bool)
+            indeed_job_recommendation.convert_kg(model, save_path, augment_bool)
         elif augment == 'true':
             augment_bool = True
-            indeed_job_recommendation.convert_kg(save_path, augment_bool)
+            indeed_job_recommendation.convert_kg(model, save_path, augment_bool)
 
         return jsonify({"success": True})
 

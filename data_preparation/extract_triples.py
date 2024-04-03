@@ -95,7 +95,9 @@ class KB:
             # All entities were cached, no need to make a request
             return [self.wiki_cache[entity] for entity in entity_list]
 
-        # batch_process
+        print("-----trying hard to find entity on wikidata, pls wait-----")
+
+        # batch_process, 10 means searching 10 entities on wiki at a time
         chunks = chunked_iterable(entities_to_match, 10)
         for chunk in chunks:
             titles = '|'.join(chunk)
@@ -117,13 +119,10 @@ class KB:
                 return None
 
             pages = response.json().get('query', {}).get('pages', {})
+
             for page_id, page_data in pages.items():
-                # cannot find the page
-                try:
-                    if page_data["title"] == "" or page_data["title"].isdigit():
-                        continue
-                except:
-                    print(page_data)
+                if page_data["title"] == "" or page_data["title"].isdigit():
+                    continue
                 title = page_data.get('title', '')
                 page_url = page_data.get('fullurl', '')
                 summary = page_data.get('extract', '')
@@ -186,22 +185,20 @@ def get_entities(sent):
     for tok in nlp(sent):
         if tok.dep_ != "punct":
             if tok.dep_ == "compound":
-                prefix = tok.text
-                if prv_tok_dep == "compound":
-                    prefix = prv_tok_text + " " + tok.text
+                prefix = tok.text if prv_tok_dep != "compound" else prv_tok_text + " " + tok.text
 
             if tok.dep_.endswith("mod"):
-                modifier = tok.text
-                if prv_tok_dep == "compound":
-                    modifier = prv_tok_text + " " + tok.text
+                modifier = tok.text if prv_tok_dep != "compound" else prv_tok_text + " " + tok.text
 
-            if tok.dep_.find("subj"):
+            if "subj" in tok.dep_:
                 ent1 = modifier + " " + prefix + " " + tok.text
                 prefix = ""
                 modifier = ""
 
-            if tok.dep_.find("obj"):
+            if "obj" in tok.dep_:
                 ent2 = modifier + " " + prefix + " " + tok.text
+                prefix = ""
+                modifier = ""
 
             prv_tok_dep = tok.dep_
             prv_tok_text = tok.text
@@ -363,13 +360,23 @@ def SPACY_extractor(candidate_sentences):
     source = [i[0] for i in entity_pairs]
     target = [i[1] for i in entity_pairs]
     kg_df = pd.DataFrame({'head': source, 'type': relations, 'tail': target})
+
     kb = KB()
+
+    relation_list = []
     for index, row in kg_df.iterrows():
-        relation = row.to_dict()
-        relation["meta"] = {
-            "spans": ""
-        }
-        kb.add_relation(relation)
+        relation_list.append(row)
+
+    new_nested_dict_list = []
+    for item in relation_list:
+        new_dict = {key: item[key] for key in ['head', 'type', 'tail']}
+        new_dict["meta"] = {"spans": []}
+        new_nested_dict_list.append([new_dict])
+
+    kb.process_entity(new_nested_dict_list)
+    for relation in new_nested_dict_list:
+        for item in relation:
+            kb.add_relation(item)
     return kb
 
 
@@ -506,15 +513,15 @@ def generate_files(model, if_neigh):
     return file, filename, train_file, test_file, valid_file
 
 
-def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, span_length=25):
+def from_text_to_kb(ex_model, file, if_neigh, expand_num, endpoint_url, max_neigh, span_length=25):
     start_time = time.time()
     directory = "./datasets"
 
     if not os.path.exists(directory):
         os.makedirs(directory)
-    file_path = os.path.join(directory, f"kb_{model}.pkl")
+    file_path = os.path.join(directory, f"kb_{ex_model}.pkl")
 
-    if model == 'REBEL':
+    if ex_model == 'REBEL':
         if os.path.exists(file_path):
             with open(file_path, "rb") as kb_file:
                 kb = pickle.load(kb_file)
@@ -524,12 +531,12 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
                 lines = [line.strip() for line in lines[1:]]
                 text = ' '.join(lines)
             # generate .pkl file with original kg from text
-            kb = REBEL_extractor(model, text, span_length)
+            kb = REBEL_extractor(ex_model, text, span_length)
             with open(file_path, "wb") as kb_file:
                 pickle.dump(kb, kb_file)
         print("-----triples extraction complete-----")
 
-        file, filename, train_file, test_file, valid_file = generate_files(model, if_neigh)
+        file, filename, train_file, test_file, valid_file = generate_files(ex_model, if_neigh)
 
         if if_neigh:
             extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
@@ -547,7 +554,7 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
         IPython.display.HTML(filename=filename)
         return original_kb, extracted_kb, kb, if_neigh
 
-    if model == 'SPACY':
+    if ex_model == 'SPACY':
         if os.path.exists(file_path):
             with open(file_path, "rb") as kb_file:
                 kb = pickle.load(kb_file)
@@ -558,7 +565,7 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
                 pickle.dump(kb, kb_file)
         print("-----triples extraction complete-----")
 
-        file, filename, train_file, test_file, valid_file = generate_files(model, if_neigh)
+        file, filename, train_file, test_file, valid_file = generate_files(ex_model, if_neigh)
 
         if if_neigh:
             extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
@@ -578,5 +585,5 @@ def from_text_to_kb(file, model, if_neigh, expand_num, endpoint_url, max_neigh, 
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-    print(f"-----kg augmentation complete, {model} running time:{elapsed_time}s-----")
+    print(f"-----kg augmentation complete, {ex_model} running time:{elapsed_time}s-----")
     print(f"-----start to kg predication-----")

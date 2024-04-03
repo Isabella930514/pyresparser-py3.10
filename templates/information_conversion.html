@@ -28,6 +28,14 @@
     <input type="file" id="upload-file" name="upload-file" accept=".csv">
 </div>
 
+<div class="form-item">
+    <label for="model-dropdown">Select Model:</label>
+    <select id="model-dropdown">
+        <option value="">Please select</option>
+        <option value="REBEL">REBEL</option>
+        <option value="SPACY">Spacy</option>
+    </select>
+</div>
 
 <div class="form-item">
     <label>I want to augment KG</label>
@@ -54,6 +62,7 @@
     });
 
     document.getElementById('convert-button').addEventListener('click', function() {
+    const model = document.getElementById('model-dropdown').value;
     const fileInput = document.getElementById('upload-file');
     const files = fileInput.files;
     const formData = new FormData();
@@ -65,6 +74,7 @@
 
     formData.append('file', files[0]);
     formData.append('augment', augmentationClicked.toString());
+    formData.append('model', model);
 
     fetch('/convert_and_augment', {
         method: 'POST',
