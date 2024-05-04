@@ -8,12 +8,9 @@ import pandas as pd
 import pickle
 import spacy
 import wikipedia
-import IPython
 import requests
 from tqdm import tqdm
 from datetime import datetime as dt
-from IPython.display import HTML
-from pyvis.network import Network
 from spacy.matcher import Matcher
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -271,86 +268,6 @@ def extract_relations_from_model_output(text):
     return relations
 
 
-def save_network_html(extracted_kb, origin_kb, potent_kb, if_neigh, filename, if_predict):
-    net = Network(directed=True, width="2000px", height="1000px", bgcolor="#eeeeee")
-
-    if not if_neigh and if_predict:
-        for e in origin_kb.entities:
-            net.add_node(e, shape="circle", color="#00FF00")
-        for r in origin_kb.relations:
-            net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
-        for ee in potent_kb.entities:
-            try:
-                net.add_node(ee, shape="circle", color="#e24353", size=5)
-            except:
-                continue
-
-        for r in potent_kb.relations:
-            try:
-                net.add_edge(r["head"], r["tail"], title=r["type"], width=5, color="red")
-            except:
-                continue
-
-    if if_neigh and not if_predict:
-        for entity in list(origin_kb.entities.keys()):
-            if entity in extracted_kb.entities:
-                del extracted_kb.entities[entity]
-        for ee in extracted_kb.entities:
-            try:
-                net.add_node(ee, shape="circle", color="#e03112")
-            except:
-                continue
-
-        for r in extracted_kb.relations:
-            try:
-                net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
-            except:
-                continue
-    if if_neigh and if_predict:
-        for entity in list(origin_kb.entities.keys()):
-            if entity in extracted_kb.entities:
-                del extracted_kb.entities[entity]
-        for ee in extracted_kb.entities:
-            try:
-                net.add_node(ee, shape="circle", color="#e03112")
-            except:
-                continue
-
-        for r in extracted_kb.relations:
-            try:
-                net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
-            except:
-                continue
-
-        for ee in potent_kb.entities:
-            try:
-                net.add_node(ee, shape="circle", color="#e28743")
-            except:
-                continue
-
-        for r in potent_kb.relations:
-            try:
-                net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"], width=2)
-            except:
-                continue
-
-    for e in origin_kb.entities:
-        net.add_node(e, shape="circle", color="#00FF00")
-    for r in origin_kb.relations:
-        net.add_edge(r["head"], r["tail"], title=r["type"], label=r["type"])
-
-    net.repulsion(
-        node_distance=200,
-        central_gravity=0.2,
-        spring_length=200,
-        spring_strength=0.05,
-        damping=0.09
-    )
-
-    net.set_edge_smooth('dynamic')
-    net.show(filename)
-
-
 def SPACY_extractor(candidate_sentences):
     entity_pairs = []
 
@@ -502,7 +419,6 @@ def split_train_test(file, train_file, test_file, valid_file):
 
 
 def generate_files(model, if_neigh):
-    filename = f"./templates/network.html"
     path = f"./datasets/{model}"
     if not os.path.exists(path):
         os.makedirs(path)
@@ -510,12 +426,21 @@ def generate_files(model, if_neigh):
     train_file = f"{path}/train.csv"
     test_file = f"{path}/test.csv"
     valid_file = f"{path}/valid.csv"
-    return file, filename, train_file, test_file, valid_file
+    return file, train_file, test_file, valid_file
+
+
+def remove_entity(extracted_kb):
+    heads_and_tails = set(relation['head'] for relation in extracted_kb.relations) | set(
+        relation['tail'] for relation in extracted_kb.relations)
+    unlinked_entities = [entity for entity in extracted_kb.entities if entity not in heads_and_tails]
+    for entity in unlinked_entities:
+        del extracted_kb.entities[entity]
 
 
 def from_text_to_kb(ex_model, file, if_neigh, expand_num, endpoint_url, max_neigh, span_length=25):
     start_time = time.time()
     directory = "./datasets"
+    potential_kb = ''
 
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -536,23 +461,22 @@ def from_text_to_kb(ex_model, file, if_neigh, expand_num, endpoint_url, max_neig
                 pickle.dump(kb, kb_file)
         print("-----triples extraction complete-----")
 
-        file, filename, train_file, test_file, valid_file = generate_files(ex_model, if_neigh)
+        file, train_file, test_file, valid_file = generate_files(ex_model, if_neigh)
 
         if if_neigh:
             extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
-            save_network_html(extracted_kb, kb, '', if_neigh, filename, False)
+            # remove single entity
+            remove_entity(extracted_kb)
             # original_kb is the kb extracted from tests
             original_kb = kb
             # kb means combined_kb now
             kb.combine(extracted_kb)
         else:
             extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
-            save_network_html(extracted_kb, kb, '', if_neigh, filename, False)
             original_kb = kb
         save_kg_to_csv(kb, file)
         split_train_test(file, train_file, test_file, valid_file)
-        IPython.display.HTML(filename=filename)
-        return original_kb, extracted_kb, kb, if_neigh
+        return original_kb, extracted_kb, potential_kb, kb, if_neigh
 
     if ex_model == 'SPACY':
         if os.path.exists(file_path):
@@ -565,23 +489,22 @@ def from_text_to_kb(ex_model, file, if_neigh, expand_num, endpoint_url, max_neig
                 pickle.dump(kb, kb_file)
         print("-----triples extraction complete-----")
 
-        file, filename, train_file, test_file, valid_file = generate_files(ex_model, if_neigh)
+        file, train_file, test_file, valid_file = generate_files(ex_model, if_neigh)
 
         if if_neigh:
             extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
-            save_network_html(extracted_kb, kb, '', if_neigh, filename, False)
+            # remove single entity
+            remove_entity(extracted_kb)
             # orginal_kb is the kb extracted from tests
             original_kb = kb
             # kb means combined_kb now
             kb.combine(extracted_kb)
         else:
             extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
-            save_network_html(extracted_kb, kb, '', if_neigh, filename, False)
             original_kb = kb
         save_kg_to_csv(kb, file)
         split_train_test(file, train_file, test_file, valid_file)
-        IPython.display.HTML(filename=filename)
-        return original_kb, extracted_kb, kb, if_neigh
+        return original_kb, extracted_kb, potential_kb, kb, if_neigh
 
     end_time = time.time()
     elapsed_time = end_time - start_time

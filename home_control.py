@@ -70,6 +70,7 @@ def convert_and_augment():
     # check file in request
     file = request.files['file']
     augment = request.form['augment']
+    prediction = request.form['prediction']
     model = request.form['model']
 
     if file.filename == '':
@@ -80,13 +81,14 @@ def convert_and_augment():
         save_path = os.path.join(app.config['SENTENSE_UPLOAD_FOLDER'], filename)
         file.save(save_path)
 
-        if augment == 'false':
-            augment_bool = False
-            indeed_job_recommendation.convert_kg(model, save_path, augment_bool)
-        elif augment == 'true':
-            augment_bool = True
-            indeed_job_recommendation.convert_kg(model, save_path, augment_bool)
-
+        if augment == 'false' and prediction == 'false':
+            indeed_job_recommendation.convert_kg(model, save_path, False, False)
+        elif augment == 'true' and prediction == 'false':
+            indeed_job_recommendation.convert_kg(model, save_path, True, False)
+        elif augment == 'false' and prediction == 'true':
+            indeed_job_recommendation.convert_kg(model, save_path, False, True)
+        elif augment == 'true' and prediction == 'true':
+            indeed_job_recommendation.convert_kg(model, save_path, True, True)
         return jsonify({"success": True})
 
     return jsonify({"error": "File processing failed"}), 500

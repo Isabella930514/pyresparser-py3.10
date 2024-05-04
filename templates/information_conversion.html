@@ -43,6 +43,12 @@
     <span id="augmentation-check" style="color: green; display: none;">✔</span>
 </div>
 
+<div class="form-item">
+    <label>Conduct Prediction Task</label>
+    <button id="prediction-button">Prediction</button>
+    <span id="prediction-check" style="color: green; display: none;">✔</span>
+</div>
+
 
 <div class="form-item">
     <button id="convert-button">Convert</button>
@@ -50,6 +56,7 @@
 
 <script>
     let augmentationClicked = false;
+    let predictionClicked = false;
 
     document.getElementById('augmentation-button').addEventListener('click', function() {
         augmentationClicked = !augmentationClicked;  // Toggle the boolean value
@@ -58,6 +65,16 @@
             checkMark.style.display = 'inline';  // Show the checkmark if augmentation is clicked
         } else {
             checkMark.style.display = 'none';  // Hide the checkmark if augmentation is not clicked
+        }
+    });
+
+    document.getElementById('prediction-button').addEventListener('click', function() {
+        predictionClicked = !predictionClicked;
+        const checkMark = document.getElementById('prediction-check');
+        if (predictionClicked) {
+            checkMark.style.display = 'inline';
+        } else {
+            checkMark.style.display = 'none';
         }
     });
 
@@ -74,6 +91,7 @@
 
     formData.append('file', files[0]);
     formData.append('augment', augmentationClicked.toString());
+    formData.append('prediction', predictionClicked.toString());
     formData.append('model', model);
 
     fetch('/convert_and_augment', {

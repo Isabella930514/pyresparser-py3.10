@@ -3,14 +3,14 @@
 import sys
 from SPARQLWrapper import SPARQLWrapper, JSON
 from bs4 import BeautifulSoup
-from itertools import islice
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from itertools import islice
 
-MAX_WORKER = 64
+MAX_WORKER = 8
 
 
-class EX_KB():
+class EX_KB:
 
     def __init__(self):
         self.entities = {}
@@ -49,7 +49,6 @@ def get_results(endpoint_url, query):
         return None
 
 
-
 def convert_format(subject_label, ex_kb, results, endpoint_url):
     label_cache = {}
 
@@ -82,31 +81,41 @@ def convert_format(subject_label, ex_kb, results, endpoint_url):
         object_uri = item['object']['value']
         object_id = object_uri.split('/')[-1]
         if object_id.startswith('Q') and object_id[1:].isdigit():
-           object_label = get_property_label(object_id, endpoint_url)
+            object_label = get_property_label(object_id, endpoint_url)
         else:
             continue
         if property_id.startswith('P') and property_id[1:].isdigit():
             property_label = get_property_label(property_id, endpoint_url)
         else:
             continue
-
-        ex_kb.add_entity(object_uri, object_label)
-        ex_kb.add_relation(subject_label, property_label, object_label, [{'start': 0, 'end': 0}])
+        if subject_label and object_label is not None:
+            ex_kb.add_entity(object_uri, object_label)
+            ex_kb.add_relation(subject_label, property_label, object_label, [{'start': 0, 'end': 0}])
 
 
 def get_wikidata_id(wikipedia_url):
-    response = requests.get(wikipedia_url)
+    response = None
+    try:
+        response = requests.get(wikipedia_url)
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        if response and response.status_code == 404:
+            return None
+        else:
+            raise
+    except requests.exceptions.RequestException as e:
+        raise
+
     soup = BeautifulSoup(response.content, 'html.parser')
     wikidata_link = soup.find("li", {"id": "t-wikibase"})
     if wikidata_link and wikidata_link.a:
         wikidata_url = wikidata_link.a.get('href')
         return wikidata_url.split('/')[-1]
     else:
-        return "Wikidata ID not found."
+        return None
 
 
 def load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh):
-
     if if_neigh:
         ex_kb = EX_KB()
         node_size = len(kb.entities)
@@ -124,7 +133,7 @@ def load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh):
             kb.relations.remove(rel)
 
         with ThreadPoolExecutor(max_workers=MAX_WORKER) as executor:
-            for key_label, value in kb.entities.items():
+            for key_label, value in islice(kb.entities.items(), expand_num):
                 entity_link = value['url']
                 executor.submit(process_entity, entity_link, endpoint_url, ex_kb, max_neigh)
         return ex_kb, kb
@@ -143,6 +152,9 @@ def load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh):
 def process_entity(entity_link, endpoint_url, ex_kb, max_neigh):
     subject_label = entity_link.split('/')[-1]
     subject_id = get_wikidata_id(entity_link)
+
+    if subject_id is None:
+        return
 
     query = f"""
     SELECT DISTINCT ?subject ?property ?object WHERE {{

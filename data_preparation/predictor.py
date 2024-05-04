@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from data_preparation import config
 
 
 class Predictor:
@@ -38,18 +39,20 @@ class Predictor:
 
         return tuples
 
-    def create_queries(self, fact, head_or_tail):
+    def create_queries(self, fact, head_or_tail_or_link):
         head, rel, tail = fact
-        if head_or_tail == "head":
+        if head_or_tail_or_link == "head":
             return [(i, rel, tail) for i in range(self.dataset.num_ent())]
-        elif head_or_tail == "tail":
+        elif head_or_tail_or_link == "tail":
             return [(head, rel, i) for i in range(self.dataset.num_ent())]
+        elif head_or_tail_or_link == "link":
+            return [(head, i, tail) for i in range(self.dataset.num_rel())]
 
     def add_fact_and_shred(self, fact, queries, raw_or_fil):
         if raw_or_fil == "raw":
-            result = [tuple(fact)] + queries
+            result = queries
         elif raw_or_fil == "fil":
-            result = [tuple(fact)] + list(set(queries) - self.all_facts_as_set_of_tuples)
+            result = list(set(queries) - self.all_facts_as_set_of_tuples)
 
         return self.shred_facts(result)
 
@@ -60,7 +63,7 @@ class Predictor:
         return torch.LongTensor(heads).to(self.device), torch.LongTensor(rels).to(self.device), torch.LongTensor(
             tails).to(self.device)
 
-    def find_potential_tuples(self, sim_scores, queries, number):
+    def find_potential_tuples(self, sim_scores, queries, number, scenario):
 
         largest_indices = []
         for _ in range(min(number, len(sim_scores))):
@@ -76,37 +79,71 @@ class Predictor:
 
         potential_tuples = []
         for index in largest_indices:
-            potential_tuples.append(queries[index])
+            if scenario == "link":
+                potential_tuples.append({
+                    "tuple": queries[index],
+                    "similarity_score": sim_scores[index]
+                })
+            else:
+                target_query = queries[index]
+                if len(set(target_query)) == len(target_query):
+                    potential_tuples.append(queries[index])
         return potential_tuples
 
     def predict(self, nlp_model, entity_pre, relation_pre, number):
         entity_id, rel_id = self.get_id(nlp_model, entity_pre, relation_pre)
-        head_or_tail = ["head", "tail"]
+        scenarios = ["head", "tail", "link"]
         final_tuples = []
-        for i in head_or_tail:
-            fake_entity = 0.00000
-            if i == "tail":
-                fact = np.array([entity_id, rel_id, fake_entity])
-                queries = self.create_queries(fact, i)
-                h, r, t = self.add_fact_and_shred(fact, queries, "fil")
-                sim_scores = self.model(h, r, t).cpu().data.numpy()
-                potential_tuples_id = self.find_potential_tuples(sim_scores, queries, number)
+        missing_component = 0.0
+
+        for scenario in scenarios:
+            if scenario in ["head", "tail"]:
+                fact = np.array([missing_component, rel_id, entity_id]) if scenario == "head" else np.array([entity_id, rel_id, missing_component])
+                queries = self.create_queries(fact, scenario)
+                h_entities, relations, t_entities = self.add_fact_and_shred(fact, queries, "fil")
+                sim_scores = self.model(h_entities, relations, t_entities).cpu().data.numpy()
+                potential_tuples_id = self.find_potential_tuples(sim_scores, queries, number, scenario)
                 for tuple_id in potential_tuples_id:
-                    entity_value = self.get_value(nlp_model, tuple_id[2])
-                    if entity_value == entity_pre:
+                    if scenario == "head":
+                        entity_value = self.get_value(nlp_model, tuple_id[0])
+                    else:
+                        entity_value = self.get_value(nlp_model, tuple_id[2])
+                    if entity_value == entity_pre or relation_pre == entity_pre or relation_pre == entity_value:
                         continue
-                    tuple = [entity_pre, relation_pre, entity_value]
-                    final_tuples.append(tuple)
-            else:
-                fact = [fake_entity, rel_id, entity_id]
-                queries = self.create_queries(fact, i)
-                h, r, t = self.add_fact_and_shred(fact, queries, "fil")
-                sim_scores = self.model(h, r, t).cpu().data.numpy()
-                potential_tuples_id = self.find_potential_tuples(sim_scores, queries, number)
-                for tuple_id in potential_tuples_id:
-                    entity_value = self.get_value(nlp_model, tuple_id[2])
-                    if entity_value == entity_pre:
+                    tuple_item = [entity_value, relation_pre, entity_pre] if scenario == "head" else [entity_pre, relation_pre, entity_value]
+                    final_tuples.append(tuple_item)
+            elif scenario == "link":
+                potential_tuples_list = []
+                for tail in range(self.dataset.num_ent()):
+                    if tail == entity_id:
                         continue
-                    tuple = [entity_value, relation_pre, entity_pre]
-                    final_tuples.append(tuple)
-        return final_tuples
+                    fact = np.array([entity_id, missing_component, tail])
+                    queries = self.create_queries(fact, scenario)
+                    h_entities, relations, t_entities = self.add_fact_and_shred(fact, queries, "fil")
+                    sim_scores = self.model(h_entities, relations, t_entities).cpu().data.numpy()
+                    potential_tuples_list.append(self.find_potential_tuples(sim_scores, queries, number, scenario))
+
+                sorted_tuples = sorted(potential_tuples_list, key=lambda x: x[0]["similarity_score"], reverse=True)
+                top_5_tuples = sorted_tuples[:config.MAX_LINK_PRE_NO]
+
+                for item_w_sim in top_5_tuples:
+                    data = item_w_sim[0]
+                    data_tuple = data['tuple']
+                    rel_value = self.get_value(nlp_model, data_tuple[1])
+                    tail_value = self.get_value(nlp_model, data_tuple[2])
+                    if rel_value == relation_pre:
+                        continue
+                    tuple_item = [entity_pre, rel_value, tail_value]
+                    final_tuples.append(tuple_item)
+
+        seen = {}
+        unique_tuples = []
+        for item in final_tuples:
+            tuple_item = tuple(item)
+            if tuple_item not in seen:
+                seen[tuple_item] = True
+                unique_tuples.append(item)
+
+        return unique_tuples
+
+

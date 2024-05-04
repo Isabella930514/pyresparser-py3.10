@@ -1,9 +1,8 @@
 import argparse
 import optuna
 import time
-import config
+import os
 import pandas as pd
-from data_preparation import extract_triples
 from data_preparation.trainer import Trainer
 from data_preparation.tester import Tester
 from data_preparation.predictor import Predictor
@@ -72,8 +71,7 @@ def run_optuna(dataset, kge_model, n_trials=50):
     return trial.params
 
 
-def visiual_final_tuple(potential_tuples, original_kb, extracted_kb, kb, if_neigh):
-    # ---- visualize predication results -----
+def construct_potential_kb(potential_tuples, kb):
     potent_kb = POTENT_KB()
     entity_list = set([tuple[2] for tuple in potential_tuples])
     entity_list.update(set([tuple[0] for tuple in potential_tuples]))
@@ -83,13 +81,24 @@ def visiual_final_tuple(potential_tuples, original_kb, extracted_kb, kb, if_neig
                 potent_kb.entities[key] = value
     for line in potential_tuples:
         potent_kb.add_relation(line[0], line[1], line[2], [{'start': 0, 'end': 0}])
-    extract_triples.save_network_html(extracted_kb, original_kb, potent_kb, if_neigh,
-                                      f"network_{config.EXTRACTOR_TYPE}.html", config.IF_PRE)
+
+    return potent_kb
 
 
-def link_predication(nlp_model, kge_model_list, entity, relation, number, original_kb, extracted_kb, kb, if_neigh):
+def link_predication(nlp_model, kge_model_list, entity, relation, number, original_kb, extracted_kb, kb):
     dataset = Dataset(nlp_model)
 
+    # best_model_path = "models/REBEL/TransH/100.chkpnt"
+    # if os.path.exists(best_model_path):
+    #     print("~~~ Prediction A~~~")
+    #     predictor = Predictor(dataset, best_model_path)
+    #     final_tuples = predictor.predict(nlp_model, entity, relation, number)
+    #     with open(f"./datasets/{nlp_model}/predicated_result_kg.csv", "w") as file:
+    #         for item in final_tuples:
+    #             file.write(str(item)+'\n')
+    #     potent_kb = construct_potential_kb(final_tuples, kb)
+    #     return extracted_kb, original_kb, potent_kb
+    # else:
     for kge_model in kge_model_list:
         # ----- Bayesian Optimization Super Parameter-----#
         best_params = run_optuna(dataset, kge_model, 50)
@@ -145,7 +154,13 @@ def link_predication(nlp_model, kge_model_list, entity, relation, number, origin
     print(f"~~~ The outperform model is {outperform_model} w best epoch {best_epoch_dict[outperform_model]} ~~~")
 
     print("~~~ Prediction ~~~")
-    best_model_path = "models/" + nlp_model + "/" + outperform_model + "/" + best_epoch_dict[outperform_model] + ".chkpnt"
+    best_model_path = "models/" + nlp_model + "/" + outperform_model + "/" + best_epoch_dict[
+        outperform_model] + ".chkpnt"
+    print(f"the best model path is : {best_model_path}")
     predictor = Predictor(dataset, best_model_path)
     final_tuples = predictor.predict(nlp_model, entity, relation, number)
-    visiual_final_tuple(final_tuples, original_kb, extracted_kb, kb, if_neigh)
+    with open(f"./datasets/{nlp_model}/predicated_result_kg.csv", "w") as file:
+        for item in final_tuples:
+            file.write(str(item) + '\n')
+    potent_kb = construct_potential_kb(final_tuples, kb)
+    return extracted_kb, original_kb, potent_kb

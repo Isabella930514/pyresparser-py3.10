@@ -14,12 +14,10 @@ from selenium.webdriver.common.by import By
 import time
 import os
 import data_preparation
+from data_preparation import config
 
-# We only collect max 500 jobs from each city
-max_results_per_city = 3
 # Number of jobs show on each result page
 page_record_limit = 20
-num_pages = 1
 
 
 def information_address(job_information):
@@ -95,7 +93,7 @@ def web_scrape(job_info_dict):
         driver.get(url)
         # Be kind and don't hit indeed server so hard
         time.sleep(3)
-        for i in range(num_pages):
+        for i in range(config.NUM_PAGE):
             if job_info_dict["site"] == "indeed":
                 try:
                     # For each job on the page find its url
@@ -112,7 +110,8 @@ def web_scrape(job_info_dict):
                     break
             else:
                 try:
-                    for job_each in driver.find_elements(By.XPATH, '//*[@class="y735df0 y735dff  y735df0 y735dff _1iz8dgs5i _1iz8dgsj _1iz8dgsk _1iz8dgsl _1iz8dgsm _1iz8dgs7"]'):
+                    for job_each in driver.find_elements(By.XPATH,
+                                                         '//*[@class="y735df0 y735dff  y735df0 y735dff _1iz8dgs5i _1iz8dgsj _1iz8dgsk _1iz8dgsl _1iz8dgsm _1iz8dgs7"]'):
                         job_link = job_each.get_attribute('href')
                         job_links.append({'location': location, 'job_link': job_link})
                     print('scraping {} page {}'.format(location, i + 1))
@@ -150,7 +149,8 @@ def web_scrape(job_info_dict):
             desc = driver.find_element(By.XPATH, '//*[@data-automation="jobAdDetails"]').text
             jobs_info.append({'link': link, 'location': location, 'title': title, 'company': company, 'desc': desc})
         else:
-            title = driver.find_element(By.CLASS_NAME, '//*[@class="icl-u-xs-mb--xs icl-u-xs-mt--none jobsearch-JobInfoHeader-title"]').text
+            title = driver.find_element(By.CLASS_NAME,
+                                        '//*[@class="icl-u-xs-mb--xs icl-u-xs-mt--none jobsearch-JobInfoHeader-title"]').text
             company = driver.find_element(By.XPATH, '//*[@class="icl-u-lg-mr--sm icl-u-xs-mr--xs"]').text
             desc = driver.find_element(By.ID, '//*[@class="jobsearch-JobComponent-description icl-u-xs-mt--md"]').text
             jobs_info.append({'link': link, 'location': location, 'title': title, 'company': company, 'desc': desc})
