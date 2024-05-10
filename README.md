@@ -6,6 +6,8 @@
 A simple resume parser used for extracting information from resumes
 ```
 run python resume_parser_main.py
+    ---- The trained model is saved into the spacy_extraction_model folder under the pyresparser folder
+    ---- If you want to run a model based on your data, run the custom_train.py file （spacy 2.1.0)
 
 ```
 A simple web scrapper for scrapping jobs-related information (job title, job company, URL, skills, description) from Indeed.nz website
