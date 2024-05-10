@@ -35,11 +35,10 @@ from pathlib import Path
 import spacy
 import json
 import logging
-from spacy.training import Example
+
 
 # new entity label
 LABEL = "COL_NAME"
-
 
 # training data
 # Note: If you're using an existing model, make sure to mix in examples of
@@ -50,8 +49,8 @@ LABEL = "COL_NAME"
 # training data
 # TRAIN_DATA = [
 #     ("i study in maria college", {"entities": [(11, 24, LABEL)]}),
-#     ("completed graduation from napier university (edinburgh united kingdom)",
-#      {"entities": [(26, 43, LABEL)]}),
+#     ("completed graduation from napier university (edinburgh,
+#       united kingdom)", {"entities": [(26, 43, LABEL)]}),
 #     ("studied in school of continuing and professional studies",
 #       {"entities": [(11, 16, LABEL)]}),
 #     ("studied at chinese university of hong kong", {"entities":
@@ -137,10 +136,10 @@ TRAIN_DATA = trim_entity_spans(convert_dataturks_to_spacy("traindata.json"))
     n_iter=("Number of training iterations", "option", "n", int),
 )
 def main(
-        model=None,
-        new_model_name="training",
-        output_dir='C:/Users/cjv2124/pyresparser-py3.10/pyresparser/spacy_model',
-        n_iter=30
+    model=None,
+    new_model_name="training",
+    output_dir='/home/omkarpathak27/Downloads/zipped/pyresparser/pyresparser',
+    n_iter=30
 ):
     """Set up the pipeline and entity recognizer, and train the new entity."""
     random.seed(0)
@@ -155,7 +154,8 @@ def main(
 
     if "ner" not in nlp.pipe_names:
         print("Creating new pipe")
-        ner = nlp.add_pipe("ner", last=True)
+        ner = nlp.create_pipe("ner")
+        nlp.add_pipe(ner, last=True)
 
     # otherwise, get it, so we can add labels to it
     else:
@@ -173,40 +173,20 @@ def main(
     move_names = list(ner.move_names)
     # get names of other pipes to disable them during training
     other_pipes = [pipe for pipe in nlp.pipe_names if pipe != "ner"]
-    with nlp.disable_pipes(*other_pipes):  # disable other pipelines during training
+    with nlp.disable_pipes(*other_pipes):  # only train NER
         optimizer = nlp.begin_training()
+        # batch up the examples using spaCy's minibatch
         for itn in range(n_iter):
             print("Starting iteration " + str(itn))
             random.shuffle(TRAIN_DATA)
             losses = {}
-
-            examples = []
             for text, annotations in TRAIN_DATA:
-                doc = nlp.make_doc(text)
-                # Use doc.spans for potentially overlapping entities
-                spans = []
-                for start, end, label in annotations.get('entities'):
-                    # Check to ensure start is less than end
-                    if start < end:
-                        span = doc.char_span(start, end, label=label)
-                        if span is not None:
-                            spans.append(span)
-                    else:
-                        continue
-                doc.spans["sc"] = spans
-
-                # Create Example with no overlapping ents in 'entities' field
-                example = Example.from_dict(doc, {"entities": []})  # No entities in ents
-                examples.append(example)
-
-            # Batch processing
-            for batch in spacy.util.minibatch(examples, size=2):
                 nlp.update(
-                    batch,
-                    drop=0.2,  # Dropout rate
-                    sgd=optimizer,  # Stochastic gradient descent optimizer
-                    losses=losses
-                )
+                    [text],  # batch of texts
+                    [annotations],  # batch of annotations
+                    drop=0.2,  # dropout - make it harder to memorise data
+                    sgd=optimizer,  # callable to update weights
+                    losses=losses)
             print("Losses", losses)
 
     # test the trained model
@@ -229,8 +209,7 @@ def main(
         print("Loading from", output_dir)
         nlp2 = spacy.load(output_dir)
         # Check the classes have loaded back consistently
-        # exist_move_name = nlp2.get_pipe("ner").move_names.pop(0)
-        # assert exist_move_name == move_names
+        assert nlp2.get_pipe("ner").move_names == move_names
         doc2 = nlp2(test_text)
         for ent in doc2.ents:
             print(ent.label_, ent.text)

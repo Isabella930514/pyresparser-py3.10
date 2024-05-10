@@ -13,7 +13,6 @@ from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO)
 
-
 def trim_entity_spans(data: list) -> list:
     """Removes leading and trailing white spaces from entity spans.
 
@@ -87,7 +86,7 @@ def get_train_data(path: str = "traindata.json"):
 
 
 def save_as_spacy_corpus(
-        data: list, dest: str = '', dev_size: float = 0.20) -> list:
+    data: list, dest: str = '', dev_size: float = 0.20) -> list:
     os.makedirs(dest, exist_ok=True)
     nlp = spacy.load('en_core_web_sm')
     db_train = DocBin()
@@ -110,7 +109,7 @@ def save_as_spacy_corpus(
         db_dev.add(doc)
     db_train.to_disk(pth.join(dest, f'train.spacy'))
     db_dev.to_disk(pth.join(dest, f'dev.spacy'))
-
+        
 
 if __name__ == "__main__":
     logging.info('Loading dataturks data...')
