@@ -52,7 +52,10 @@ def upload_resume():
     for file in uploaded_files:
         if file:
             filename = secure_filename(file.filename)
-            save_path = os.path.join(app.config['RESUME_UPLOAD_FOLDER'], filename)
+            resume_upload_folder = app.config['RESUME_UPLOAD_FOLDER']
+            if not os.path.exists(resume_upload_folder):
+                os.makedirs(resume_upload_folder)
+            save_path = os.path.join(resume_upload_folder, filename)
             file.save(save_path)
             file_list.append(filename)
     resume_list = resume_parser_main.resume_parser(file_list, app.config['RESUME_UPLOAD_FOLDER'])

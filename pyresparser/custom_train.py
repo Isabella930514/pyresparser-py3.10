@@ -138,7 +138,7 @@ TRAIN_DATA = trim_entity_spans(convert_dataturks_to_spacy("traindata.json"))
 def main(
     model=None,
     new_model_name="training",
-    output_dir='/home/omkarpathak27/Downloads/zipped/pyresparser/pyresparser',
+    output_dir='C:/Users/cjv2124/pyresparser-py3.10/pyresparser/spacy_extraction_model',
     n_iter=30
 ):
     """Set up the pipeline and entity recognizer, and train the new entity."""

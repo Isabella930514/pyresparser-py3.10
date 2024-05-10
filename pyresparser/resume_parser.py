@@ -17,7 +17,8 @@ class ResumeParser(object):
     ):
         print('Spacy model is loading...')
         nlp = spacy.load('en_core_web_sm')
-        custom_nlp = spacy.load(os.path.dirname(os.path.abspath(__file__)))
+        # custom_nlp = spacy.load(os.path.dirname(os.path.abspath(__file__)))
+        custom_nlp = spacy.load('C:/Users/cjv2124/pyresparser-py3.10/pyresparser/spacy_extraction_model')
         self.__skills_file = skills_file
         self.__custom_regex = custom_regex
         self.__matcher = Matcher(nlp.vocab)
