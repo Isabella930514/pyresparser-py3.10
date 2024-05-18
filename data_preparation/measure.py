@@ -1,6 +1,3 @@
-import pandas as pd
-
-
 class Measure:
     def __init__(self):
         self.hit1 = {"raw": 0.0, "fil": 0.0}
@@ -41,6 +38,6 @@ class Measure:
     def write(self, nlp_model, kge_model):
         for raw_or_fil in ["raw", "fil"]:
             if raw_or_fil == "fil":
-                with open(f"./datasets/{nlp_model}/model_comparision.csv", "a") as file:
+                with open(f"./data_preparation/datasets/{nlp_model}/model_comparison.csv", "a") as file:
                     file.write(f"{kge_model},{raw_or_fil},{self.hit1[raw_or_fil]},{self.hit3[raw_or_fil]},{self.hit10[raw_or_fil]},{self.mr[raw_or_fil]},{self.mrr[raw_or_fil]}\n")
 

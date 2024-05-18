@@ -1,5 +1,6 @@
-from flask import Flask, render_template, request, jsonify, url_for
-from data_preparation import web_scrapper, job_skill_graph, indeed_job_recommendation
+from flask import Flask, render_template, request, jsonify
+from data_preparation import indeed_job_recommendation
+from scrapper import web_scrapper
 from werkzeug.utils import secure_filename
 from pyresparser import resume_parser_main
 import os
@@ -8,7 +9,7 @@ app = Flask(__name__)
 
 RESUME_UPLOAD_FOLDER = './pyresparser/resumes'
 app.config['RESUME_UPLOAD_FOLDER'] = RESUME_UPLOAD_FOLDER
-app.config['SENTENSE_UPLOAD_FOLDER'] = './data_preparation/datasets'
+app.config['SENTENCE_UPLOAD_FOLDER'] = './data_preparation/datasets'
 
 
 @app.route("/")
@@ -81,7 +82,7 @@ def convert_and_augment():
 
     if file:
         filename = secure_filename(file.filename)
-        save_path = os.path.join(app.config['SENTENSE_UPLOAD_FOLDER'], filename)
+        save_path = os.path.join(app.config['SENTENCE_UPLOAD_FOLDER'], filename)
         file.save(save_path)
 
         if augment == 'false' and prediction == 'false':
@@ -97,9 +98,9 @@ def convert_and_augment():
     return jsonify({"error": "File processing failed"}), 500
 
 
-@app.route('/network.html')
+@app.route('/template.html')
 def network_rebel():
-    return render_template('network.html')
+    return render_template('template.html')
 
 
 if __name__ == '__main__':

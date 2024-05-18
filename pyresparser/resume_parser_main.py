@@ -10,9 +10,12 @@ def resume_parser(resume_name_list, path):
         data = ResumeParser(f'{path}/{resume}').get_extracted_data()
         resume_list.append(data)
     # Write all resume info to a json file so it can be re-used later
-    home_dir = os.path.expanduser("~")
     filename = 'resume_jobs_info.json'
-    filepath = os.path.join(home_dir, filename)
+    file_path = './pyresparser/outputs'
+    if not os.path.exists(file_path):
+        os.makedirs(file_path)
+
+    filepath = os.path.join(file_path, filename)
 
     with open(filepath, 'w') as fp:
         json.dump(resume_list, fp)

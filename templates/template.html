@@ -1,0 +1,258 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 2000px;
+                 height: 1000px;
+                 background-color: #eeeeee;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 2000px;
+                 height: 1000px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#e8a71c", "id": "The_man", "label": "The_man", "shape": "circle", "size": 150}, {"color": "#e8a71c", "id": "Legendary", "label": "Legendary", "shape": "circle", "size": 150}, {"color": "#e8a71c", "id": "Godzilla", "label": "Godzilla", "shape": "circle", "size": 150}, {"color": "#e8a71c", "id": "stereotype", "label": "stereotype", "shape": "circle", "size": 150}, {"color": "#e8a71c", "id": "Wikimedia disambiguation page", "label": "Wikimedia disambiguation page", "shape": "circle", "size": 150}, {"color": "#e8a71c", "id": "pejorative", "label": "pejorative", "shape": "circle", "size": 150}, {"color": "#e8a71c", "id": "law enforcement agency", "label": "law enforcement agency", "shape": "circle", "size": 150}, {"color": "#e8a71c", "id": "authority (sociology)", "label": "authority (sociology)", "shape": "circle", "size": 150}, {"color": "#e8a71c", "id": "Godzilla vs. Kong", "label": "Godzilla vs. Kong", "shape": "circle", "size": 150}, {"color": "#e8a71c", "id": "Monarch: Legacy of Monsters", "label": "Monarch: Legacy of Monsters", "shape": "circle", "size": 150}, {"color": "#e8a71c", "id": "Category:Godzilla", "label": "Category:Godzilla", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Selene", "label": "Selene", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Bear mccreary", "label": "Bear mccreary", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Sophie", "label": "Sophie", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Ghidorah", "label": "Ghidorah", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "The collectible", "label": "The collectible", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Hdr10", "label": "Hdr10", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Film", "label": "Film", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "John Cassavetes", "label": "John Cassavetes", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Mall cop", "label": "Mall cop", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Vivienne graham", "label": "Vivienne graham", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Made the film", "label": "Made the film", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Religious awakening", "label": "Religious awakening", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Cult wails with him", "label": "Cult wails with him", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Kyle chandler", "label": "Kyle chandler", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Percipi aut percipere", "label": "Percipi aut percipere", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Monarch", "label": "Monarch", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Cinematographer", "label": "Cinematographer", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Zero mostel", "label": "Zero mostel", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Paul blart", "label": "Paul blart", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Gotham", "label": "Gotham", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "Vancouver", "label": "Vancouver", "shape": "circle", "size": 150}, {"color": "#ed0e19", "id": "David rayner clark", "label": "David rayner clark", "shape": "circle", "size": 150}, {"color": "#00FF00", "id": "Rodan", "label": "Rodan", "shape": "circle"}, {"color": "#00FF00", "id": "Vestibule", "label": "Vestibule", "shape": "circle"}, {"color": "#00FF00", "id": "The man", "label": "The man", "shape": "circle"}, {"color": "#00FF00", "id": "Indiana jones franchise", "label": "Indiana jones franchise", "shape": "circle"}, {"color": "#00FF00", "id": "Indiana jones", "label": "Indiana jones", "shape": "circle"}, {"color": "#00FF00", "id": "Special effects", "label": "Special effects", "shape": "circle"}, {"color": "#00FF00", "id": "Stunt work", "label": "Stunt work", "shape": "circle"}, {"color": "#00FF00", "id": "Vancouver film school", "label": "Vancouver film school", "shape": "circle"}, {"color": "#00FF00", "id": "Legendarys", "label": "Legendarys", "shape": "circle"}, {"color": "#00FF00", "id": "Set on fire", "label": "Set on fire", "shape": "circle"}, {"color": "#00FF00", "id": "Temple", "label": "Temple", "shape": "circle"}, {"color": "#00FF00", "id": "Max wall", "label": "Max wall", "shape": "circle"}, {"color": "#00FF00", "id": "Wails with him", "label": "Wails with him", "shape": "circle"}, {"color": "#00FF00", "id": "Parable of a womans religious awakening", "label": "Parable of a womans religious awakening", "shape": "circle"}, {"color": "#00FF00", "id": "Scream", "label": "Scream", "shape": "circle"}, {"color": "#00FF00", "id": "Womans", "label": "Womans", "shape": "circle"}, {"color": "#00FF00", "id": "National film awards", "label": "National film awards", "shape": "circle"}, {"color": "#00FF00", "id": "India", "label": "India", "shape": "circle"}, {"color": "#00FF00", "id": "Mothra", "label": "Mothra", "shape": "circle"}, {"color": "#00FF00", "id": "King ghidorah", "label": "King ghidorah", "shape": "circle"}, {"color": "#00FF00", "id": "Pun", "label": "Pun", "shape": "circle"}, {"color": "#00FF00", "id": "Puns", "label": "Puns", "shape": "circle"}, {"color": "#00FF00", "id": "Berlin", "label": "Berlin", "shape": "circle"}, {"color": "#00FF00", "id": "Brandenburg", "label": "Brandenburg", "shape": "circle"}, {"color": "#00FF00", "id": "King", "label": "King", "shape": "circle"}, {"color": "#00FF00", "id": "Soundtrack", "label": "Soundtrack", "shape": "circle"}, {"color": "#00FF00", "id": "August 2 2019", "label": "August 2 2019", "shape": "circle"}, {"color": "#00FF00", "id": "Jack macgowran", "label": "Jack macgowran", "shape": "circle"}, {"color": "#00FF00", "id": "Lines", "label": "Lines", "shape": "circle"}, {"color": "#00FF00", "id": "Rod", "label": "Rod", "shape": "circle"}, {"color": "#00FF00", "id": "Mythological texts", "label": "Mythological texts", "shape": "circle"}, {"color": "#00FF00", "id": "Clear", "label": "Clear", "shape": "circle"}, {"color": "#00FF00", "id": "Clear file", "label": "Clear file", "shape": "circle"}, {"color": "#00FF00", "id": "Film and television academy berlin", "label": "Film and television academy berlin", "shape": "circle"}, {"color": "#00FF00", "id": "German", "label": "German", "shape": "circle"}, {"color": "#00FF00", "id": "Disowns her", "label": "Disowns her", "shape": "circle"}, {"color": "#00FF00", "id": "Disowns her monarch", "label": "Disowns her monarch", "shape": "circle"}, {"color": "#00FF00", "id": "Clear files", "label": "Clear files", "shape": "circle"}, {"color": "#00FF00", "id": "Academy berlin", "label": "Academy berlin", "shape": "circle"}, {"color": "#00FF00", "id": "40leaf shooting script", "label": "40leaf shooting script", "shape": "circle"}, {"color": "#00FF00", "id": "Alan schneider", "label": "Alan schneider", "shape": "circle"}, {"color": "#00FF00", "id": "German film and television academy berlin", "label": "German film and television academy berlin", "shape": "circle"}, {"color": "#00FF00", "id": "Disowns", "label": "Disowns", "shape": "circle"}, {"color": "#00FF00", "id": "The film", "label": "The film", "shape": "circle"}, {"color": "#00FF00", "id": "Cast", "label": "Cast", "shape": "circle"}, {"color": "#00FF00", "id": "Director", "label": "Director", "shape": "circle"}, {"color": "#00FF00", "id": "Original godzilla suit", "label": "Original godzilla suit", "shape": "circle"}, {"color": "#00FF00", "id": "Hdr", "label": "Hdr", "shape": "circle"}, {"color": "#00FF00", "id": "Writing", "label": "Writing", "shape": "circle"}, {"color": "#00FF00", "id": "Producing", "label": "Producing", "shape": "circle"}, {"color": "#00FF00", "id": "Godzilla suit", "label": "Godzilla suit", "shape": "circle"}, {"color": "#00FF00", "id": "Sound stage", "label": "Sound stage", "shape": "circle"}, {"color": "#00FF00", "id": "Postproduction", "label": "Postproduction", "shape": "circle"}, {"color": "#00FF00", "id": "The franchise", "label": "The franchise", "shape": "circle"}, {"color": "#00FF00", "id": "Robbie robertson", "label": "Robbie robertson", "shape": "circle"}, {"color": "#00FF00", "id": "M global", "label": "M global", "shape": "circle"}, {"color": "#00FF00", "id": "Collectible", "label": "Collectible", "shape": "circle"}, {"color": "#00FF00", "id": "Structurally", "label": "Structurally", "shape": "circle"}, {"color": "#00FF00", "id": "Emotionally", "label": "Emotionally", "shape": "circle"}, {"color": "#00FF00", "id": "Dramatically", "label": "Dramatically", "shape": "circle"}, {"color": "#00FF00", "id": "Yoshimitsu b", "label": "Yoshimitsu b", "shape": "circle"}, {"color": "#00FF00", "id": "Executive producer", "label": "Executive producer", "shape": "circle"}, {"color": "#00FF00", "id": "Canadian", "label": "Canadian", "shape": "circle"}, {"color": "#00FF00", "id": "Film school", "label": "Film school", "shape": "circle"}, {"color": "#00FF00", "id": "Film directors", "label": "Film directors", "shape": "circle"}, {"color": "#00FF00", "id": "Yoshimitsu", "label": "Yoshimitsu", "shape": "circle"}, {"color": "#00FF00", "id": "Original", "label": "Original", "shape": "circle"}, {"color": "#00FF00", "id": "They did it", "label": "They did it", "shape": "circle"}, {"color": "#00FF00", "id": "Philosophically", "label": "Philosophically", "shape": "circle"}, {"color": "#00FF00", "id": "Film director", "label": "Film director", "shape": "circle"}, {"color": "#00FF00", "id": "Aisha hinds", "label": "Aisha hinds", "shape": "circle"}, {"color": "#00FF00", "id": "O\u0027shea jackson jr", "label": "O\u0027shea jackson jr", "shape": "circle"}, {"color": "#00FF00", "id": "I cant wait to see it", "label": "I cant wait to see it", "shape": "circle"}, {"color": "#00FF00", "id": "Blind Eye", "label": "Blind Eye", "shape": "circle"}, {"color": "#00FF00", "id": "Eye", "label": "Eye", "shape": "circle"}, {"color": "#00FF00", "id": "Aisha", "label": "Aisha", "shape": "circle"}, {"color": "#00FF00", "id": "Kota eberhardt", "label": "Kota eberhardt", "shape": "circle"}, {"color": "#00FF00", "id": "Blind eye", "label": "Blind eye", "shape": "circle"}, {"color": "#00FF00", "id": "Cinematographers", "label": "Cinematographers", "shape": "circle"}, {"color": "#00FF00", "id": "Screenwriters", "label": "Screenwriters", "shape": "circle"}, {"color": "#00FF00", "id": "Telepath", "label": "Telepath", "shape": "circle"}, {"color": "#00FF00", "id": "Warner bros", "label": "Warner bros", "shape": "circle"}, {"color": "#00FF00", "id": "Theatrically", "label": "Theatrically", "shape": "circle"}, {"color": "#00FF00", "id": "Quicksilver", "label": "Quicksilver", "shape": "circle"}, {"color": "#00FF00", "id": "Mystique", "label": "Mystique", "shape": "circle"}, {"color": "#00FF00", "id": "Millie bobby brown", "label": "Millie bobby brown", "shape": "circle"}, {"color": "#00FF00", "id": "Bradley whitford", "label": "Bradley whitford", "shape": "circle"}, {"color": "#00FF00", "id": "The score", "label": "The score", "shape": "circle"}, {"color": "#00FF00", "id": "Mccreary", "label": "Mccreary", "shape": "circle"}, {"color": "#00FF00", "id": "The soundtrack", "label": "The soundtrack", "shape": "circle"}, {"color": "#00FF00", "id": "College", "label": "College", "shape": "circle"}, {"color": "#00FF00", "id": "University", "label": "University", "shape": "circle"}, {"color": "#00FF00", "id": "Vera farm", "label": "Vera farm", "shape": "circle"}, {"color": "#00FF00", "id": "Dante pereira-olson", "label": "Dante pereira-olson", "shape": "circle"}, {"color": "#00FF00", "id": "Douglas hodge", "label": "Douglas hodge", "shape": "circle"}, {"color": "#00FF00", "id": "Aut percipere", "label": "Aut percipere", "shape": "circle"}, {"color": "#00FF00", "id": "Dante pereiraolson", "label": "Dante pereiraolson", "shape": "circle"}, {"color": "#00FF00", "id": "Penn", "label": "Penn", "shape": "circle"}, {"color": "#00FF00", "id": "Simon kinberg", "label": "Simon kinberg", "shape": "circle"}, {"color": "#00FF00", "id": "Mauro fiore", "label": "Mauro fiore", "shape": "circle"}, {"color": "#00FF00", "id": "Walt disney studios motion pictures", "label": "Walt disney studios motion pictures", "shape": "circle"}, {"color": "#00FF00", "id": "Distributed", "label": "Distributed", "shape": "circle"}, {"color": "#00FF00", "id": "Written", "label": "Written", "shape": "circle"}, {"color": "#00FF00", "id": "Percipi", "label": "Percipi", "shape": "circle"}, {"color": "#00FF00", "id": "Post-production", "label": "Post-production", "shape": "circle"}, {"color": "#00FF00", "id": "Filmmaking", "label": "Filmmaking", "shape": "circle"}, {"color": "#00FF00", "id": "Marketing", "label": "Marketing", "shape": "circle"}, {"color": "#00FF00", "id": "Distribution", "label": "Distribution", "shape": "circle"}, {"color": "#00FF00", "id": "Penn and simon kinberg", "label": "Penn and simon kinberg", "shape": "circle"}, {"color": "#00FF00", "id": "Walt disney studios", "label": "Walt disney studios", "shape": "circle"}, {"color": "#00FF00", "id": "Motion pictures", "label": "Motion pictures", "shape": "circle"}, {"color": "#00FF00", "id": "Becoming joker", "label": "Becoming joker", "shape": "circle"}, {"color": "#00FF00", "id": "Joker", "label": "Joker", "shape": "circle"}, {"color": "#00FF00", "id": "Scott chambliss", "label": "Scott chambliss", "shape": "circle"}, {"color": "#00FF00", "id": "Production designer", "label": "Production designer", "shape": "circle"}, {"color": "#00FF00", "id": "Art director", "label": "Art director", "shape": "circle"}, {"color": "#00FF00", "id": "The eye patch", "label": "The eye patch", "shape": "circle"}, {"color": "#00FF00", "id": "The soundtrack was released digitally on june 7", "label": "The soundtrack was released digitally on june 7", "shape": "circle"}, {"color": "#00FF00", "id": "The chair", "label": "The chair", "shape": "circle"}, {"color": "#00FF00", "id": "Chair", "label": "Chair", "shape": "circle"}, {"color": "#00FF00", "id": "War dogs", "label": "War dogs", "shape": "circle"}, {"color": "#00FF00", "id": "August 2016", "label": "August 2016", "shape": "circle"}, {"color": "#00FF00", "id": "Pre-production", "label": "Pre-production", "shape": "circle"}, {"color": "#00FF00", "id": "Production", "label": "Production", "shape": "circle"}, {"color": "#00FF00", "id": "Preproduction", "label": "Preproduction", "shape": "circle"}, {"color": "#00FF00", "id": "War dog", "label": "War dog", "shape": "circle"}, {"color": "#00FF00", "id": "Filming", "label": "Filming", "shape": "circle"}, {"color": "#00FF00", "id": "Coat tail", "label": "Coat tail", "shape": "circle"}, {"color": "#00FF00", "id": "Mechanics", "label": "Mechanics", "shape": "circle"}, {"color": "#00FF00", "id": "Storytelling", "label": "Storytelling", "shape": "circle"}, {"color": "#00FF00", "id": "Method", "label": "Method", "shape": "circle"}, {"color": "#00FF00", "id": "Action bronson", "label": "Action bronson", "shape": "circle"}, {"color": "#00FF00", "id": "Craig di francia", "label": "Craig di francia", "shape": "circle"}, {"color": "#00FF00", "id": "Action", "label": "Action", "shape": "circle"}, {"color": "#00FF00", "id": "Ar", "label": "Ar", "shape": "circle"}, {"color": "#00FF00", "id": "Coat", "label": "Coat", "shape": "circle"}, {"color": "#00FF00", "id": "Tail", "label": "Tail", "shape": "circle"}, {"color": "#00FF00", "id": "The Good the Bad and the Ugly", "label": "The Good the Bad and the Ugly", "shape": "circle"}, {"color": "#00FF00", "id": "Her eyes", "label": "Her eyes", "shape": "circle"}, {"color": "#00FF00", "id": "Collapse", "label": "Collapse", "shape": "circle"}, {"color": "#00FF00", "id": "Entertainment", "label": "Entertainment", "shape": "circle"}, {"color": "#00FF00", "id": "Michael Caine", "label": "Michael Caine", "shape": "circle"}, {"color": "#00FF00", "id": "Ar ar", "label": "Ar ar", "shape": "circle"}, {"color": "#00FF00", "id": "Paul blart mall cop", "label": "Paul blart mall cop", "shape": "circle"}, {"color": "#00FF00", "id": "Horror films", "label": "Horror films", "shape": "circle"}, {"color": "#00FF00", "id": "His", "label": "His", "shape": "circle"}, {"color": "#00FF00", "id": "His eyes", "label": "His eyes", "shape": "circle"}, {"color": "#00FF00", "id": "Horror film", "label": "Horror film", "shape": "circle"}, {"color": "#00FF00", "id": "Religious", "label": "Religious", "shape": "circle"}, {"color": "#00FF00", "id": "The temple", "label": "The temple", "shape": "circle"}, {"color": "#00FF00", "id": "Franchise", "label": "Franchise", "shape": "circle"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "color": "#e8a71c", "from": "The_man", "label": "instance of", "title": "instance of", "to": "stereotype"}, {"arrows": "to", "color": "#e8a71c", "from": "Legendary", "label": "instance of", "title": "instance of", "to": "Wikimedia disambiguation page"}, {"arrows": "to", "color": "#e8a71c", "from": "The_man", "label": "instance of", "title": "instance of", "to": "pejorative"}, {"arrows": "to", "color": "#e8a71c", "from": "Godzilla", "label": "media franchise", "title": "media franchise", "to": "Godzilla"}, {"arrows": "to", "color": "#e8a71c", "from": "The_man", "label": "depicts", "title": "depicts", "to": "law enforcement agency"}, {"arrows": "to", "color": "#e8a71c", "from": "The_man", "label": "depicts", "title": "depicts", "to": "authority (sociology)"}, {"arrows": "to", "color": "#e8a71c", "from": "Godzilla", "label": "derivative work", "title": "derivative work", "to": "Godzilla vs. Kong"}, {"arrows": "to", "color": "#e8a71c", "from": "Godzilla", "label": "derivative work", "title": "derivative work", "to": "Godzilla"}, {"arrows": "to", "color": "#e8a71c", "from": "Godzilla", "label": "derivative work", "title": "derivative work", "to": "Monarch: Legacy of Monsters"}, {"arrows": "to", "color": "#e8a71c", "from": "Godzilla", "label": "topic\u0027s main category", "title": "topic\u0027s main category", "to": "Category:Godzilla"}, {"arrows": "to", "color": "#ed0e19", "from": "Cinematographer", "label": "has part", "title": "has part", "to": "Zero mostel", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Vancouver", "label": "has part", "title": "has part", "to": "Zero mostel", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "John Cassavetes", "label": "has part", "title": "has part", "to": "Zero mostel", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "The collectible", "label": "has part", "title": "has part", "to": "Zero mostel", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Bear mccreary", "label": "has part", "title": "has part", "to": "Zero mostel", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Selene", "label": "has part", "title": "has part", "to": "Zero mostel", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Mall cop", "label": "has part", "title": "has part", "to": "Zero mostel", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Made the film", "label": "has part", "title": "has part", "to": "Zero mostel", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Zero mostel", "label": "has part", "title": "has part", "to": "Ghidorah", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Zero mostel", "label": "has part", "title": "has part", "to": "Cult wails with him", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Zero mostel", "label": "has part", "title": "has part", "to": "Gotham", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Zero mostel", "label": "has part", "title": "has part", "to": "Hdr10", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Zero mostel", "label": "has part", "title": "has part", "to": "Vivienne graham", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Zero mostel", "label": "has part", "title": "has part", "to": "Percipi aut percipere", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Zero mostel", "label": "has part", "title": "has part", "to": "Sophie", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Zero mostel", "label": "Mystique", "title": "Mystique", "to": "Kyle chandler", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Zero mostel", "label": "Douglas hodge", "title": "Douglas hodge", "to": "David rayner clark", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Zero mostel", "label": "Mythological texts", "title": "Mythological texts", "to": "Monarch", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Zero mostel", "label": "Philosophically", "title": "Philosophically", "to": "Religious awakening", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Zero mostel", "label": "The soundtrack was released digitally on june 7", "title": "The soundtrack was released digitally on june 7", "to": "Vivienne graham", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Zero mostel", "label": "pejorative", "title": "pejorative", "to": "Film", "width": 5}, {"arrows": "to", "color": "#ed0e19", "from": "Zero mostel", "label": "Pun", "title": "Pun", "to": "Paul blart", "width": 5}, {"arrows": "to", "from": "Rodan", "label": "instance of", "title": "instance of", "to": "Monarch"}, {"arrows": "to", "from": "Vestibule", "label": "part of", "title": "part of", "to": "The man"}, {"arrows": "to", "from": "Indiana jones franchise", "label": "has part", "title": "has part", "to": "Indiana jones"}, {"arrows": "to", "from": "Godzilla", "label": "instance of", "title": "instance of", "to": "Legendary"}, {"arrows": "to", "from": "Special effects", "label": "has part", "title": "has part", "to": "Stunt work"}, {"arrows": "to", "from": "Vancouver film school", "label": "located in the administrative territorial entity", "title": "located in the administrative territorial entity", "to": "Vancouver"}, {"arrows": "to", "from": "Godzilla", "label": "instance of", "title": "instance of", "to": "Legendarys"}, {"arrows": "to", "from": "Set on fire", "label": "location", "title": "location", "to": "Temple"}, {"arrows": "to", "from": "Max wall", "label": "creator", "title": "creator", "to": "David rayner clark"}, {"arrows": "to", "from": "Wails with him", "label": "instance of", "title": "instance of", "to": "Parable of a womans religious awakening"}, {"arrows": "to", "from": "Stunt work", "label": "subclass of", "title": "subclass of", "to": "Special effects"}, {"arrows": "to", "from": "Scream", "label": "facet of", "title": "facet of", "to": "Womans"}, {"arrows": "to", "from": "National film awards", "label": "country", "title": "country", "to": "India"}, {"arrows": "to", "from": "Mothra", "label": "sibling", "title": "sibling", "to": "King ghidorah"}, {"arrows": "to", "from": "David rayner clark", "label": "notable work", "title": "notable work", "to": "Max wall"}, {"arrows": "to", "from": "Vancouver film school", "label": "country", "title": "country", "to": "India"}, {"arrows": "to", "from": "King ghidorah", "label": "sibling", "title": "sibling", "to": "Mothra"}, {"arrows": "to", "from": "Max wall", "label": "director", "title": "director", "to": "David rayner clark"}, {"arrows": "to", "from": "Pun", "label": "use", "title": "use", "to": "Puns"}, {"arrows": "to", "from": "Berlin", "label": "located in the administrative territorial entity", "title": "located in the administrative territorial entity", "to": "Brandenburg"}, {"arrows": "to", "from": "Ghidorah", "label": "position held", "title": "position held", "to": "King"}, {"arrows": "to", "from": "Soundtrack", "label": "publication date", "title": "publication date", "to": "August 2 2019"}, {"arrows": "to", "from": "Zero mostel", "label": "has part", "title": "has part", "to": "Jack macgowran"}, {"arrows": "to", "from": "Pun", "label": "subclass of", "title": "subclass of", "to": "Lines"}, {"arrows": "to", "from": "Berlin", "label": "twinned administrative body", "title": "twinned administrative body", "to": "Brandenburg"}, {"arrows": "to", "from": "Rod", "label": "part of", "title": "part of", "to": "Mythological texts"}, {"arrows": "to", "from": "Zero mostel", "label": "part of", "title": "part of", "to": "Jack macgowran"}, {"arrows": "to", "from": "Godzilla", "label": "uses", "title": "uses", "to": "Rod"}, {"arrows": "to", "from": "Rod", "label": "used by", "title": "used by", "to": "Godzilla"}, {"arrows": "to", "from": "Hdr10", "label": "instance of", "title": "instance of", "to": "Clear"}, {"arrows": "to", "from": "Berlin", "label": "shares border with", "title": "shares border with", "to": "Brandenburg"}, {"arrows": "to", "from": "Brandenburg", "label": "shares", "title": "shares", "to": "Berlin"}, {"arrows": "to", "from": "Zero mostel", "label": "sibling", "title": "sibling", "to": "Jack macgowran"}, {"arrows": "to", "from": "Hdr10", "label": "instance of", "title": "instance of", "to": "Clear file"}, {"arrows": "to", "from": "Film and television academy berlin", "label": "country", "title": "country", "to": "German"}, {"arrows": "to", "from": "Disowns her", "label": "subclass of", "title": "subclass of", "to": "Disowns her monarch"}, {"arrows": "to", "from": "Hdr10", "label": "instance of", "title": "instance of", "to": "Clear files"}, {"arrows": "to", "from": "Academy berlin", "label": "country", "title": "country", "to": "German"}, {"arrows": "to", "from": "Disowns her", "label": "facet of", "title": "facet of", "to": "Disowns her monarch"}, {"arrows": "to", "from": "40leaf shooting script", "label": "author", "title": "author", "to": "Alan schneider"}, {"arrows": "to", "from": "German film and television academy berlin", "label": "country", "title": "country", "to": "German"}, {"arrows": "to", "from": "Disowns", "label": "facet of", "title": "facet of", "to": "Disowns her"}, {"arrows": "to", "from": "The film", "label": "cast member", "title": "cast member", "to": "Cast"}, {"arrows": "to", "from": "Alan schneider", "label": "occupation", "title": "occupation", "to": "Director"}, {"arrows": "to", "from": "Vivienne graham", "label": "notable work", "title": "notable work", "to": "Original godzilla suit"}, {"arrows": "to", "from": "Hdr10", "label": "part of", "title": "part of", "to": "Hdr"}, {"arrows": "to", "from": "Writing", "label": "subclass of", "title": "subclass of", "to": "Producing"}, {"arrows": "to", "from": "Vivienne graham", "label": "notable work", "title": "notable work", "to": "Godzilla suit"}, {"arrows": "to", "from": "Hdr10", "label": "instance of", "title": "instance of", "to": "Hdr"}, {"arrows": "to", "from": "Sound stage", "label": "use", "title": "use", "to": "Postproduction"}, {"arrows": "to", "from": "The franchise", "label": "instance of", "title": "instance of", "to": "Film"}, {"arrows": "to", "from": "Vivienne graham", "label": "notable work", "title": "notable work", "to": "Godzilla"}, {"arrows": "to", "from": "Robbie robertson", "label": "employer", "title": "employer", "to": "M global"}, {"arrows": "to", "from": "The collectible", "label": "subclass of", "title": "subclass of", "to": "Collectible"}, {"arrows": "to", "from": "Structurally", "label": "opposite of", "title": "opposite of", "to": "Emotionally"}, {"arrows": "to", "from": "Dramatically", "label": "subclass of", "title": "subclass of", "to": "Structurally"}, {"arrows": "to", "from": "Postproduction", "label": "part of", "title": "part of", "to": "Producing"}, {"arrows": "to", "from": "Yoshimitsu b", "label": "occupation", "title": "occupation", "to": "Executive producer"}, {"arrows": "to", "from": "Robbie robertson", "label": "country of citizenship", "title": "country of citizenship", "to": "Canadian"}, {"arrows": "to", "from": "Film school", "label": "field of work", "title": "field of work", "to": "Film directors"}, {"arrows": "to", "from": "Yoshimitsu b", "label": "occupation", "title": "occupation", "to": "Yoshimitsu"}, {"arrows": "to", "from": "Soundtrack", "label": "instance of", "title": "instance of", "to": "Original"}, {"arrows": "to", "from": "They did it", "label": "instance of", "title": "instance of", "to": "Film"}, {"arrows": "to", "from": "Robbie robertson", "label": "record label", "title": "record label", "to": "M global"}, {"arrows": "to", "from": "Emotionally", "label": "different from", "title": "different from", "to": "Philosophically"}, {"arrows": "to", "from": "Philosophically", "label": "different from", "title": "different from", "to": "Emotionally"}, {"arrows": "to", "from": "Film school", "label": "practiced by", "title": "practiced by", "to": "Film director"}, {"arrows": "to", "from": "Aisha hinds", "label": "has part", "title": "has part", "to": "O\u0027shea jackson jr"}, {"arrows": "to", "from": "I cant wait to see it", "label": "instance of", "title": "instance of", "to": "Film"}, {"arrows": "to", "from": "Blind Eye", "label": "instance of", "title": "instance of", "to": "Eye"}, {"arrows": "to", "from": "Film school", "label": "field of work", "title": "field of work", "to": "Film director"}, {"arrows": "to", "from": "Aisha hinds", "label": "mother", "title": "mother", "to": "Aisha"}, {"arrows": "to", "from": "Selene", "label": "performer", "title": "performer", "to": "Kota eberhardt"}, {"arrows": "to", "from": "Blind Eye", "label": "named after", "title": "named after", "to": "Blind eye"}, {"arrows": "to", "from": "Cinematographers", "label": "subclass of", "title": "subclass of", "to": "Screenwriters"}, {"arrows": "to", "from": "Selene", "label": "occupation", "title": "occupation", "to": "Telepath"}, {"arrows": "to", "from": "Aisha hinds", "label": "sibling", "title": "sibling", "to": "O\u0027shea jackson jr"}, {"arrows": "to", "from": "Blind Eye", "label": "main subject", "title": "main subject", "to": "Blind eye"}, {"arrows": "to", "from": "Warner bros", "label": "product or material produced", "title": "product or material produced", "to": "Theatrically"}, {"arrows": "to", "from": "Quicksilver", "label": "different from", "title": "different from", "to": "Mystique"}, {"arrows": "to", "from": "Selene", "label": "instance of", "title": "instance of", "to": "Telepath"}, {"arrows": "to", "from": "Warner bros", "label": "industry", "title": "industry", "to": "Theatrically"}, {"arrows": "to", "from": "Millie bobby brown", "label": "spouse", "title": "spouse", "to": "Bradley whitford"}, {"arrows": "to", "from": "The score", "label": "composer", "title": "composer", "to": "Mccreary"}, {"arrows": "to", "from": "Quicksilver", "label": "sibling", "title": "sibling", "to": "Mystique"}, {"arrows": "to", "from": "Mystique", "label": "sibling", "title": "sibling", "to": "Quicksilver"}, {"arrows": "to", "from": "The score", "label": "performer", "title": "performer", "to": "Mccreary"}, {"arrows": "to", "from": "The soundtrack", "label": "publication date", "title": "publication date", "to": "August 2 2019"}, {"arrows": "to", "from": "College", "label": "different from", "title": "different from", "to": "University"}, {"arrows": "to", "from": "Quicksilver", "label": "spouse", "title": "spouse", "to": "Mystique"}, {"arrows": "to", "from": "Mystique", "label": "spouse", "title": "spouse", "to": "Quicksilver"}, {"arrows": "to", "from": "Kyle chandler", "label": "part of", "title": "part of", "to": "Vera farm"}, {"arrows": "to", "from": "Dante pereira-olson", "label": "member of", "title": "member of", "to": "Douglas hodge"}, {"arrows": "to", "from": "University", "label": "different from", "title": "different from", "to": "College"}, {"arrows": "to", "from": "Kyle chandler", "label": "member of", "title": "member of", "to": "Vera farm"}, {"arrows": "to", "from": "Percipi aut percipere", "label": "part of", "title": "part of", "to": "Aut percipere"}, {"arrows": "to", "from": "Dante pereiraolson", "label": "cast member", "title": "cast member", "to": "Douglas hodge"}, {"arrows": "to", "from": "Penn", "label": "spouse", "title": "spouse", "to": "Simon kinberg"}, {"arrows": "to", "from": "Simon kinberg", "label": "spouse", "title": "spouse", "to": "Penn"}, {"arrows": "to", "from": "Vera farm", "label": "cast member", "title": "cast member", "to": "Kyle chandler"}, {"arrows": "to", "from": "Mauro fiore", "label": "occupation", "title": "occupation", "to": "Cinematographer"}, {"arrows": "to", "from": "Penn", "label": "sibling", "title": "sibling", "to": "Simon kinberg"}, {"arrows": "to", "from": "Simon kinberg", "label": "sibling", "title": "sibling", "to": "Penn"}, {"arrows": "to", "from": "Dante pereiraolson", "label": "member of", "title": "member of", "to": "Douglas hodge"}, {"arrows": "to", "from": "Walt disney studios motion pictures", "label": "instance of", "title": "instance of", "to": "Distributed"}, {"arrows": "to", "from": "Bear mccreary", "label": "occupation", "title": "occupation", "to": "Written"}, {"arrows": "to", "from": "Percipi", "label": "instance of", "title": "instance of", "to": "Aut percipere"}, {"arrows": "to", "from": "Post-production", "label": "part of", "title": "part of", "to": "Filmmaking"}, {"arrows": "to", "from": "Marketing", "label": "has part", "title": "has part", "to": "Distribution"}, {"arrows": "to", "from": "Penn and simon kinberg", "label": "has part", "title": "has part", "to": "Simon kinberg"}, {"arrows": "to", "from": "Walt disney studios", "label": "industry", "title": "industry", "to": "Motion pictures"}, {"arrows": "to", "from": "Filmmaking", "label": "has part", "title": "has part", "to": "Postproduction"}, {"arrows": "to", "from": "Walt disney studios", "label": "product or material produced", "title": "product or material produced", "to": "Motion pictures"}, {"arrows": "to", "from": "Becoming joker", "label": "facet of", "title": "facet of", "to": "Joker"}, {"arrows": "to", "from": "Scott chambliss", "label": "occupation", "title": "occupation", "to": "Production designer"}, {"arrows": "to", "from": "Scott chambliss", "label": "occupation", "title": "occupation", "to": "Art director"}, {"arrows": "to", "from": "The eye patch", "label": "instance of", "title": "instance of", "to": "Eye"}, {"arrows": "to", "from": "Postproduction", "label": "part of", "title": "part of", "to": "Filmmaking"}, {"arrows": "to", "from": "The soundtrack was released digitally on june 7", "label": "publication date", "title": "publication date", "to": "August 2 2019"}, {"arrows": "to", "from": "Production designer", "label": "subclass of", "title": "subclass of", "to": "Art director"}, {"arrows": "to", "from": "The chair", "label": "different from", "title": "different from", "to": "Chair"}, {"arrows": "to", "from": "Chair", "label": "different from", "title": "different from", "to": "The chair"}, {"arrows": "to", "from": "Made the film", "label": "instance of", "title": "instance of", "to": "Film"}, {"arrows": "to", "from": "War dogs", "label": "date of first performance", "title": "date of first performance", "to": "August 2016"}, {"arrows": "to", "from": "The chair", "label": "subclass of", "title": "subclass of", "to": "Chair"}, {"arrows": "to", "from": "Pre-production", "label": "part of", "title": "part of", "to": "Production"}, {"arrows": "to", "from": "Production", "label": "has part", "title": "has part", "to": "Preproduction"}, {"arrows": "to", "from": "War dog", "label": "publication date", "title": "publication date", "to": "August 2016"}, {"arrows": "to", "from": "Postproduction", "label": "follows", "title": "follows", "to": "Filming"}, {"arrows": "to", "from": "Preproduction", "label": "part of", "title": "part of", "to": "Production"}, {"arrows": "to", "from": "Coat tail", "label": "instance of", "title": "instance of", "to": "Mechanics"}, {"arrows": "to", "from": "War dogs", "label": "publication date", "title": "publication date", "to": "August 2016"}, {"arrows": "to", "from": "Storytelling", "label": "instance of", "title": "instance of", "to": "Method"}, {"arrows": "to", "from": "Action bronson", "label": "performer", "title": "performer", "to": "Craig di francia"}, {"arrows": "to", "from": "Action bronson", "label": "genre", "title": "genre", "to": "Action"}, {"arrows": "to", "from": "Made the film", "label": "cast member", "title": "cast member", "to": "Cast"}, {"arrows": "to", "from": "Sophie", "label": "present in work", "title": "present in work", "to": "Ar"}, {"arrows": "to", "from": "Ar", "label": "characters", "title": "characters", "to": "Sophie"}, {"arrows": "to", "from": "Coat", "label": "has part", "title": "has part", "to": "Tail"}, {"arrows": "to", "from": "Cult wails with him", "label": "instance of", "title": "instance of", "to": "Parable of a womans religious awakening"}, {"arrows": "to", "from": "The Good the Bad and the Ugly", "label": "director", "title": "director", "to": "John Cassavetes"}, {"arrows": "to", "from": "Action bronson", "label": "subclass of", "title": "subclass of", "to": "Action"}, {"arrows": "to", "from": "Ar", "label": "spouse", "title": "spouse", "to": "Sophie"}, {"arrows": "to", "from": "Sophie", "label": "spouse", "title": "spouse", "to": "Ar"}, {"arrows": "to", "from": "Her eyes", "label": "has effect", "title": "has effect", "to": "Collapse"}, {"arrows": "to", "from": "Storytelling", "label": "subclass of", "title": "subclass of", "to": "Entertainment"}, {"arrows": "to", "from": "The Good the Bad and the Ugly", "label": "director", "title": "director", "to": "Michael Caine"}, {"arrows": "to", "from": "Ar ar", "label": "narrative location", "title": "narrative location", "to": "Gotham"}, {"arrows": "to", "from": "The Good the Bad and the Ugly", "label": "cast member", "title": "cast member", "to": "Michael Caine"}, {"arrows": "to", "from": "Her eyes", "label": "instance of", "title": "instance of", "to": "Collapse"}, {"arrows": "to", "from": "Paul blart mall cop", "label": "genre", "title": "genre", "to": "Horror films"}, {"arrows": "to", "from": "His", "label": "has part", "title": "has part", "to": "His eyes"}, {"arrows": "to", "from": "Paul blart mall cop", "label": "genre", "title": "genre", "to": "Horror film"}, {"arrows": "to", "from": "Religious awakening", "label": "facet of", "title": "facet of", "to": "Religious"}, {"arrows": "to", "from": "The temple", "label": "significant event", "title": "significant event", "to": "Set on fire"}, {"arrows": "to", "from": "Rodan", "label": "has part", "title": "has part", "to": "Monarch"}, {"arrows": "to", "from": "The franchise", "label": "has part", "title": "has part", "to": "Franchise"}, {"arrows": "to", "from": "Franchise", "label": "part of", "title": "part of", "to": "The franchise"}, {"arrows": "to", "from": "Paul blart", "label": "notable work", "title": "notable work", "to": "Mall cop"}, {"arrows": "to", "from": "Vestibule", "label": "part of", "title": "part of", "to": "Vestibule"}, {"arrows": "to", "from": "Temple", "label": "significant event", "title": "significant event", "to": "Set on fire"}, {"arrows": "to", "from": "The_man", "label": "instance of", "title": "instance of", "to": "stereotype"}, {"arrows": "to", "from": "Legendary", "label": "instance of", "title": "instance of", "to": "Wikimedia disambiguation page"}, {"arrows": "to", "from": "The_man", "label": "instance of", "title": "instance of", "to": "pejorative"}, {"arrows": "to", "from": "Godzilla", "label": "media franchise", "title": "media franchise", "to": "Godzilla"}, {"arrows": "to", "from": "The_man", "label": "depicts", "title": "depicts", "to": "law enforcement agency"}, {"arrows": "to", "from": "The_man", "label": "depicts", "title": "depicts", "to": "authority (sociology)"}, {"arrows": "to", "from": "Godzilla", "label": "derivative work", "title": "derivative work", "to": "Godzilla vs. Kong"}, {"arrows": "to", "from": "Godzilla", "label": "derivative work", "title": "derivative work", "to": "Godzilla"}, {"arrows": "to", "from": "Godzilla", "label": "derivative work", "title": "derivative work", "to": "Monarch: Legacy of Monsters"}, {"arrows": "to", "from": "Godzilla", "label": "topic\u0027s main category", "title": "topic\u0027s main category", "to": "Category:Godzilla"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "repulsion": {
+            "centralGravity": 0.2,
+            "damping": 0.09,
+            "nodeDistance": 200,
+            "springConstant": 0.05,
+            "springLength": 200
+        },
+        "solver": "repulsion",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

@@ -1,6 +1,7 @@
 import itertools
 import math
 import os
+import re
 import os.path
 import time
 import torch
@@ -261,9 +262,9 @@ def extract_relations_from_model_output(text):
                 relation += ' ' + token
     if subject != '' and relation != '' and object_ != '':
         relations.append({
-            'head': subject.strip(),
-            'type': relation.strip(),
-            'tail': object_.strip()
+            'head': re.sub(r'[^a-zA-Z0-9 ]', '', subject.strip()),
+            'type': re.sub(r'[^a-zA-Z0-9 ]', '', relation.strip()),
+            'tail': re.sub(r'[^a-zA-Z0-9 ]', '', object_.strip())
         })
     return relations
 
@@ -419,10 +420,10 @@ def split_train_test(file, train_file, test_file, valid_file):
 
 
 def generate_files(model, if_neigh):
-    path = f"./datasets/{model}"
+    path = f"./data_preparation/datasets/{model}"
     if not os.path.exists(path):
         os.makedirs(path)
-    file = f"./datasets/{model}/kg_{if_neigh}.csv"
+    file = f"./data_preparation/datasets/{model}/kg_{if_neigh}.csv"
     train_file = f"{path}/train.csv"
     test_file = f"{path}/test.csv"
     valid_file = f"{path}/valid.csv"
@@ -439,7 +440,7 @@ def remove_entity(extracted_kb):
 
 def from_text_to_kb(ex_model, file, if_neigh, expand_num, endpoint_url, max_neigh, span_length=25):
     start_time = time.time()
-    directory = "./datasets"
+    directory = "./data_preparation/datasets"
     potential_kb = ''
 
     if not os.path.exists(directory):
@@ -495,7 +496,7 @@ def from_text_to_kb(ex_model, file, if_neigh, expand_num, endpoint_url, max_neig
             extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
             # remove single entity
             remove_entity(extracted_kb)
-            # orginal_kb is the kb extracted from tests
+            # original_kb is the kb extracted from tests
             original_kb = kb
             # kb means combined_kb now
             kb.combine(extracted_kb)

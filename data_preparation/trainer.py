@@ -1,10 +1,10 @@
 import os
 import torch
 import torch.nn.functional as F
-from data_preparation.SimplE import SimplE
-from data_preparation.transx.TransE import TransE
-from data_preparation.transx.TransH import TransH
-from data_preparation.transx.TransR import TransR
+from data_preparation.kg_models.SimplE import SimplE
+from data_preparation.kg_models.TransE import TransE
+from data_preparation.kg_models.TransH import TransH
+from data_preparation.kg_models.TransR import TransR
 
 
 class Trainer:
@@ -22,7 +22,7 @@ class Trainer:
             raise ValueError("Unsupported KGE model type: {}".format(kge_model))
         self.dataset = dataset
         self.args = args
-        self.oprimizer = is_Optimizer
+        self.optimizer = is_Optimizer
         self.best_validation_loss = float('inf')
         self.best_model_path = ''
 
@@ -55,7 +55,7 @@ class Trainer:
             print("Loss in iteration " + str(epoch) + ": " + str(
                 total_loss) + "(" + self.dataset.name + " and " + kge_model + ")")
 
-            if self.oprimizer:
+            if self.optimizer:
                 validation_loss = self.validate()
                 if validation_loss < self.best_validation_loss:
                     self.best_validation_loss = validation_loss

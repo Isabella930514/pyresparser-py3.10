@@ -11,7 +11,7 @@ the relation between job and skill is calculated by three ways:
 """
 
 from collections import Counter
-from data_preparation import config
+import config
 from textblob import TextBlob
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer

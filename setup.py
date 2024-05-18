@@ -8,8 +8,8 @@ with open("requirements.txt", "r") as f:
 setup(
     name='pyresparser-py3.10',
     version='2.0.0',
-    url='https://github.com/sinmentis/pyresparser-py3.10',
-    author='sinmentis',
+    url='https://github.com/Isabella930514/pyresparser-py3.10',
+    author='Isabel Wang',
     license='GPL-3.0',
     include_package_data=True,
     packages=find_packages(),

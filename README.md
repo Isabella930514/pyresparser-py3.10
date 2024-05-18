@@ -12,10 +12,10 @@ run python resume_parser_main.py
 ```
 A simple web scrapper for scrapping jobs-related information (job title, job company, URL, skills, description) from Indeed.nz website
 ```
-run indeed_job_recommendation.py
+run web_scrapper.py
 
 ```
-Triple Extractor for the long text.
+Triple Extractor for the long text (kg extraction, kg augmentation, and kg predication).
 ```
 run indeed_job_recommendation.py
 

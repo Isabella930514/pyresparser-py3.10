@@ -7,17 +7,15 @@ Created on Wed 2023
 Scrape jobs from indeed.nz
 """
 
+import time
+import os
 import random, json
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
-import time
-import os
-import data_preparation
-from data_preparation import config
+import config
 
-# Number of jobs show on each result page
-page_record_limit = 20
+file_path = './scrapper/outputs'
 
 
 def information_address(job_information):
@@ -41,8 +39,10 @@ def get_jobs_info(job_information):
     """
 
     job_info_dict = information_address(job_information)
-    home_dir = os.path.expanduser("~")
-    filepath = os.path.join(home_dir, "indeed_jobs_info.json")
+    filename = "indeed_jobs_info.json"
+    if not os.path.exists(file_path):
+        os.makedirs(file_path)
+    filepath = os.path.join(file_path, filename)
     exists = os.path.isfile(filepath)
     if exists:
         with open(filepath, 'r') as fp:
@@ -85,7 +85,7 @@ def web_scrape(job_info_dict):
         else:
             '''indeed searching'''
             url = 'https://nz.indeed.com/jobs?q=' + target_job + '&l=' + location + '&limit=' + str(
-                page_record_limit) + '&fromage=' + str(data_preparation.config.DAY_RANGE)
+                config.PAGE_RECORD_LIMIT) + '&fromage=' + str(config.DAY_RANGE)
 
         # Set timeout
         driver.set_page_load_timeout(150)
@@ -122,8 +122,10 @@ def web_scrape(job_info_dict):
                     break
             time.sleep(3)
     # Write all jobs links to a json file so it can be reused later
-    home_dir = os.path.expanduser("~")
-    filepath = os.path.join(home_dir, "indeed_jobs_links.json")
+    filename = "indeed_jobs_links.json"
+    if not os.path.exists(file_path):
+        os.makedirs(file_path)
+    filepath = os.path.join(file_path, filename)
     with open(filepath, 'w') as fp:
         json.dump(job_links, fp)
 
@@ -156,7 +158,7 @@ def web_scrape(job_info_dict):
             jobs_info.append({'link': link, 'location': location, 'title': title, 'company': company, 'desc': desc})
 
     # Write all jobs info to a json file so it can be re-used later
-    filepath = os.path.join(home_dir, "indeed_jobs_info.json")
+    filepath = os.path.join(file_path, "indeed_jobs_info.json")
     with open(filepath, 'w') as fp:
         json.dump(jobs_info, fp)
 

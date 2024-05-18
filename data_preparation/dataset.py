@@ -7,7 +7,7 @@ import math
 class Dataset:
     def __init__(self, ds_name):
         self.name = ds_name
-        self.dir = "datasets/" + ds_name + "/"
+        self.dir = "./data_preparation/datasets/" + ds_name + "/"
         self.ent2id = {}
         self.rel2id = {}
         self.data = {spl: self.read(self.dir + spl + ".csv") for spl in ["train", "valid", "test"]}
