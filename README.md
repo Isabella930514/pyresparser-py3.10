@@ -1,7 +1,10 @@
 # pyresparser
 ![Dev Processing](https://github.com/Isabella930514/pyresparser-py3.10/assets/20884866/3df60bc5-277b-4773-b467-c3b0502eb307)
 
-
+```
+run code for three main functions
+```
+run home_control.py
 ```
 A simple resume parser used for extracting information from resumes
 ```
