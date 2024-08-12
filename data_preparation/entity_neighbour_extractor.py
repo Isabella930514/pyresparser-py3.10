@@ -49,7 +49,13 @@ def get_results(endpoint_url, query):
         return None
 
 
-def convert_format(subject_label, ex_kb, results, endpoint_url):
+def write_exkb_to_file(ex_model, subject, property, object):
+    triple_str = f"{subject},{property},{object}\n"
+    with open(f"./data_preparation/datasets/{ex_model}/expanded_kg.csv","a") as file:
+        file.write(triple_str)
+
+
+def convert_format(ex_model, subject_label, ex_kb, results, endpoint_url):
     label_cache = {}
 
     def get_property_label(property_id, endpoint_url):
@@ -91,6 +97,7 @@ def convert_format(subject_label, ex_kb, results, endpoint_url):
         if subject_label and object_label is not None:
             ex_kb.add_entity(object_uri, object_label)
             ex_kb.add_relation(subject_label, property_label, object_label, [{'start': 0, 'end': 0}])
+            write_exkb_to_file(ex_model, subject_label, property_label, object_label)
 
 
 def get_wikidata_id(wikipedia_url):
@@ -115,7 +122,7 @@ def get_wikidata_id(wikipedia_url):
         return None
 
 
-def load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh):
+def load_data(ex_model, kb, expand_num, endpoint_url, max_neigh, if_neigh):
     if if_neigh:
         ex_kb = EX_KB()
         node_size = len(kb.entities)
@@ -123,7 +130,6 @@ def load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh):
         print(f"-----expect to expand {expand_num} entities and start to expand-----")
 
         # del relations if head or tail does not included in entities
-        # kb.entities = dict(islice(kb.entities.items(), expand_num))
         node_list = list(kb.entities.keys())
         relations_to_remove = []
         for rel in kb.relations:
@@ -135,7 +141,7 @@ def load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh):
         with ThreadPoolExecutor(max_workers=MAX_WORKER) as executor:
             for key_label, value in islice(kb.entities.items(), expand_num):
                 entity_link = value['url']
-                executor.submit(process_entity, entity_link, endpoint_url, ex_kb, max_neigh)
+                executor.submit(process_entity, ex_model, entity_link, endpoint_url, ex_kb, max_neigh)
         return ex_kb, kb
     else:
         # del relations if head or tail does not include in entities
@@ -149,7 +155,7 @@ def load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh):
         return " ", kb
 
 
-def process_entity(entity_link, endpoint_url, ex_kb, max_neigh):
+def process_entity(ex_model, entity_link, endpoint_url, ex_kb, max_neigh):
     subject_label = entity_link.split('/')[-1]
     subject_id = get_wikidata_id(entity_link)
 
@@ -166,8 +172,11 @@ def process_entity(entity_link, endpoint_url, ex_kb, max_neigh):
         ?subject rdfs:label ?subjectLabel .
         ?object rdfs:label ?objectLabel .
       }}
+      FILTER(LANG(?objectLabel) = "en")
     }}
     """
+
+
     results = get_results(endpoint_url, query)
     results = list(results["results"]["bindings"])
 
@@ -176,4 +185,4 @@ def process_entity(entity_link, endpoint_url, ex_kb, max_neigh):
         results = results[:max_neigh]
 
     ex_kb.add_entity(entity_link, subject_label)
-    convert_format(subject_label, ex_kb, results, endpoint_url)
+    convert_format(ex_model, subject_label, ex_kb, results, endpoint_url)

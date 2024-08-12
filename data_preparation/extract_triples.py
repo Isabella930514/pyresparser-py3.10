@@ -465,7 +465,7 @@ def from_text_to_kb(ex_model, file, if_neigh, expand_num, endpoint_url, max_neig
         file, train_file, test_file, valid_file = generate_files(ex_model, if_neigh)
 
         if if_neigh:
-            extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
+            extracted_kb, kb = ene.load_data(ex_model, kb, expand_num, endpoint_url, max_neigh, if_neigh)
             # remove single entity
             remove_entity(extracted_kb)
             # original_kb is the kb extracted from tests
@@ -493,7 +493,7 @@ def from_text_to_kb(ex_model, file, if_neigh, expand_num, endpoint_url, max_neig
         file, train_file, test_file, valid_file = generate_files(ex_model, if_neigh)
 
         if if_neigh:
-            extracted_kb, kb = ene.load_data(kb, expand_num, endpoint_url, max_neigh, if_neigh)
+            extracted_kb, kb = ene.load_data(ex_model, kb, expand_num, endpoint_url, max_neigh, if_neigh)
             # remove single entity
             remove_entity(extracted_kb)
             # original_kb is the kb extracted from tests

@@ -15,13 +15,16 @@ class Predictor:
         with open(f"./data_preparation/datasets/{nlp_model}/entity_id.csv", "r", encoding="utf-8") as entity_file:
             entities = entity_file.readlines()
         entities_list = [entity.strip().split(',') for entity in entities]
-        entity_id = [entity[1] for entity in entities_list if entity[0] == entity_pre][0]
+        try:
+            entity_id = [entity[1] for entity in entities_list if entity[0] == entity_pre][0]
+            with open(f"./data_preparation/datasets/{nlp_model}/rel_id.csv", "r", encoding="utf-8") as rel_file:
+                rels = rel_file.readlines()
+            rels_list = [rel.strip().split(',') for rel in rels]
+            rel_id = [rel[1] for rel in rels_list if rel[0] == relation_pre][0]
+            return int(entity_id), int(rel_id)
+        except:
+            print(entity_pre)
 
-        with open(f"./data_preparation/datasets/{nlp_model}/rel_id.csv", "r", encoding="utf-8") as rel_file:
-            rels = rel_file.readlines()
-        rels_list = [rel.strip().split(',') for rel in rels]
-        rel_id = [rel[1] for rel in rels_list if rel[0] == relation_pre][0]
-        return int(entity_id), int(rel_id)
 
     def get_value(self, nlp_model, find_entity):
         with open(f"./data_preparation/datasets/{nlp_model}/entity_id.csv", "r", encoding="utf-8") as entity_file:

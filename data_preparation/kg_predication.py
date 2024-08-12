@@ -116,7 +116,7 @@ def select_optional_model(nlp_model):
 def link_predication(nlp_model, kge_model_list, entity, relation, number, original_kb, extracted_kb, kb):
     dataset = Dataset(nlp_model)
 
-    best_model_file_path = "models/best_model_path.csv"
+    best_model_file_path = f"models/{nlp_model}/best_model_path.csv"
     if os.path.exists(best_model_file_path):
         with open(best_model_file_path, "r") as file:
             best_model_path = file.readline()
@@ -173,7 +173,10 @@ def link_predication(nlp_model, kge_model_list, entity, relation, number, origin
 
             print("~~~~ Testing on the best epoch ~~~~")
             best_model_path = "models/" + args.dataset + "/" + kge_model + "/" + best_epoch + ".chkpnt"
-            best_model_file_path = "models/best_model_path.csv"
+            best_model_file_path = f"models/{nlp_model}/best_model_path.csv"
+            directory = os.path.dirname(best_model_file_path)
+            if not os.path.exists(directory):
+                os.makedirs(directory)
             with open(best_model_file_path, "w") as file:
                 file.write(best_model_path)
             tester = Tester(dataset, best_model_path, "test")

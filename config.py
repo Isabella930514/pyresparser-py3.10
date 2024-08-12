@@ -40,9 +40,8 @@ KGE_METHOD_LIST = ['TransE', 'TransH', 'TransR', 'SimplE']
 # triple embedding size
 ENTITY_EMBEDDING_DIM = 100
 # The entity you want to do the prediction
-# entity = "Animation"
-entity = "Zero mostel"
-relation = "has part"
+entity = "Artificial Intelligence"
+relation = "part of"
 # The number of potential entities you want to explore based on target node
 POTENTIAL_ENT_NO = 8
 MAX_LINK_PRE_NO = 8
